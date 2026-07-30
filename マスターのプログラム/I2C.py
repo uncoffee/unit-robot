@@ -1,7 +1,7 @@
 import time
 from smbus2 import SMBus, i2c_msg
 
-class I2CCommunicator:
+class I2C_class:
     def __init__(self, slave_id, bus_number=1):
         """
         初期化メソッド
@@ -55,10 +55,17 @@ class I2CCommunicator:
             print(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
             return None
         
+    def ask(self, text, num):
+        print(text)
+        self.sending(text)
+        result = self.reading(num)
+
+        return result
+        
 # --- 使い方（インスタンス化と実行）の例 ---
 if __name__ == "__main__":
     # スレイブアドレス 0x08 用のインスタンスを作成
-    device = I2CCommunicator(slave_id=0x08)
+    device = I2C_class(slave_id=0x08)
     
     # 1. 送信 (sending)
     # 引数に slave_id を渡す必要がなくなり、スッキリします
@@ -94,7 +101,7 @@ def scan_i2c_bus(bus_number=1):
 # スキャンを実行して結果を表示
 if __name__ == "__main__":
     print("I2Cスキャンを開始します...")
-    connected_devices = scan_i2c_bus(1)
+    connected_devices = scan_i2c_bus(1)#masterのスレーブアドレスを引数に入れる
     
     if connected_devices:
         print(f"検出されたデバイスのアドレス: {connected_devices}")

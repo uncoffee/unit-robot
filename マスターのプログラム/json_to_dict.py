@@ -1,6 +1,6 @@
 import json
 
-def load_json_to_dict(file_path):
+def load_json(file_path):
     """
     指定されたパスのJSONファイルを読み込み、辞書型として返す関数
     :param file_path: JSONファイルのパス (例: 'data.json')
