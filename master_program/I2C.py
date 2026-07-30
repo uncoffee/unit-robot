@@ -11,11 +11,13 @@ class I2C_class:
         self.slave_id = slave_id
         self.bus_number = bus_number
 
-    def sending(self, text):
+    def sending(self, raw_text):
         """
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列
         """
+
+        text = raw_text + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
         try:
             # 文字列をバイト列に変換
             data_bytes = list(text.encode('utf-8'))
@@ -25,7 +27,7 @@ class I2C_class:
                 write_msg = i2c_msg.write(self.slave_id, data_bytes)
                 bus.i2c_rdwr(write_msg)
                 
-            print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
+            print(f"[Success] Sent to {hex(self.slave_id)}: '{raw_text}'")
         except Exception as e:
             print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
 
@@ -56,16 +58,23 @@ class I2C_class:
             return None
         
     def ask(self, text, num):
-        print(text)
-        self.sending(text)
-        result = self.reading(num)
+        count = 0 
+        result = "None"
+
+        while result == "None":# エラーが起きたら再送を行う。
+            self.sending(text)
+            result = str(self.reading(num))
+            count += 1
+
+            if count > 49:
+                print(f"再送しすぎじゃない？現在{count}回目")
 
         return result
         
 # --- 使い方（インスタンス化と実行）の例 ---
 if __name__ == "__main__":
     # スレイブアドレス 0x08 用のインスタンスを作成
-    device = I2C_class(slave_id=0x08)
+    device = I2C_class(slave_id=0x10)
     
     # 1. 送信 (sending)
     # 引数に slave_id を渡す必要がなくなり、スッキリします
@@ -76,7 +85,7 @@ if __name__ == "__main__":
     # 2. 受信 (reading)
     # こちらもバイト数を指定するだけで、設定された slave_id から読み込みます
     print("Reading from slave...")
-    data = device.reading(8)
+    data = device.reading(3)
     print(f"Received: {data}")
 
 
