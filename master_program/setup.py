@@ -2,7 +2,6 @@ from json_to_dict import load_json
 from I2C import I2C_class ,scan_i2c_bus
 
 import importlib
-import importlib
 
 def create_instance(module_name, class_name, *args, **kwargs):
     try:
@@ -43,7 +42,7 @@ def start():
     slave_adds = scan_i2c_bus(master_add)
     print(f"スレーブID{slave_adds}が見つかりました")
 
-    I2CDict = {}
+    UnitsDict = {}
 
     for slave_add in slave_adds:
         # i2c通信用のクラスからインスタンスを作成

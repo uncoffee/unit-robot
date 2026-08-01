@@ -1,10 +1,14 @@
 #include <Wire.h>
+#include <string>
 
 #define SLAVE_ADDRESS 0x10
 
 String inputBuffer = "";     // 受信中の文字を溜めるバッファ
 String receivedMessage = ""; // '?' の直前までをまとめた文字列
 volatile bool isReady = false; // メッセージが完成したかどうかのフラグ
+
+String send = ""; // 送信する文字
+String num = ""; // 送信する文字の長さ
 
 void setup() {
   Serial.begin(9600);
@@ -20,7 +24,16 @@ void setup() {
 }
 
 void loop() {  
-  delay(100);
+  // メッセージが完成（'?'を受信）したか確認
+  if (isReady) {
+    // まとめられた文字列を取得
+    String msg = getMessage();
+    // 取得した文字列を使った処理（例：シリアル出力）
+    send = TextCheck(msg);
+    // 文字数をカウント
+    num = CountText(send);
+
+    delay(100);
 }
 
 // 完成したメッセージを取得してフラグをクリアする関数
@@ -29,25 +42,16 @@ String getMessage() {
   isReady = false; // 処理が終わったのでフラグを戻す
   return temp;    // まとめられた文字列を返す
 }
-String sendMessage() {
-    // メッセージが完成（'?'を受信）したか確認
-  if (isReady) {
-    // まとめられた文字列を取得
-    String msg = getMessage();
-
-    // 取得した文字列を使った処理（例：シリアル出力）
-    String result = TextCheck(msg);
-    return result;
-    
-  } else {
-    return "None";
-  }
-}
 
 String TextCheck(String text) {
     if (text == "who") {
         return "moter";
     }
+}
+
+CountText(String text) {
+  std::string s = text;
+  return s.length();
 }
 
 // マスターからデータを受信したときの処理（割り込み処理）
@@ -71,6 +75,14 @@ void receiveEvent(int howMany) {
 }
 
 // マスターからデータを要求されたときの処理
+int count = 0;
+
 void requestEvent() {
-  Wire.write('I'); 
+  if count == 0 {
+    Wire.write(num);
+    count = 1;
+  } else {
+    Wire.write(send); 
+    count = 0;
+  }
 }

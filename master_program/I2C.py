@@ -57,18 +57,19 @@ class I2C_class:
             print(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
             return None
         
-    def ask(self, text, num):
+    def ask(self, text):
         count = 0 
-        result = "None"
+        result = None
 
         while result == "None":# エラーが起きたら再送を行う。
-            self.sending(text)
-            result = str(self.reading(num))
+            if count > 10:# 10回再送したらエラー吐く
+                raise ConnectionError("送りすぎ")
             count += 1
 
-            if count > 49:
-                print(f"再送しすぎじゃない？現在{count}回目")
-
+            self.sending(text)
+            num = int(self.reading(3)) #3桁指定されてから受け取る
+            result = str(self.reading(num))
+            
         return result
         
 # --- 使い方（インスタンス化と実行）の例 ---
