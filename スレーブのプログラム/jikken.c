@@ -45,7 +45,7 @@ String getMessage() {
 
 String TextCheck(String text) {
     if (text == "who") {
-        return "moter";
+        return "rover";
     }
 }
 

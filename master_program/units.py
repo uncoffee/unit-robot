@@ -6,4 +6,5 @@ class moter:
         self.sins.sending("stop") #I2CCommunicatorのsendingメソッドを呼び出す
 
 class rover(moter):
-    pass
+    def a(self,text):
+        print(text)

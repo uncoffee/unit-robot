@@ -68,7 +68,7 @@ class I2C_class:
 
             self.sending(text)
             num = int(self.reading(3)) #3桁指定されてから受け取る
-            result = str(self.reading(num))
+            result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
             
         return result
         
