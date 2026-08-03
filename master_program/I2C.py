@@ -3,11 +3,6 @@ from smbus2 import SMBus, i2c_msg
 
 class I2C_class:
     def __init__(self, slave_id, bus_number=1):
-        """
-        初期化メソッド
-        :param slave_id: 通信対象のスレイブアドレス (例: 0x08)
-        :param bus_number: I2Cバスの番号 (ラズパイの場合は通常 1)
-        """
         self.slave_id = slave_id
         self.bus_number = bus_number
 
@@ -27,7 +22,7 @@ class I2C_class:
                 write_msg = i2c_msg.write(self.slave_id, data_bytes)
                 bus.i2c_rdwr(write_msg)
                 
-            print(f"[Success] Sent to {hex(self.slave_id)}: '{raw_text}'")
+            print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
         except Exception as e:
             print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
 
@@ -61,14 +56,23 @@ class I2C_class:
         count = 0 
         result = None
 
-        while result == "None":# エラーが起きたら再送を行う。
-            if count > 10:# 10回再送したらエラー吐く
-                raise ConnectionError("送りすぎ")
-            count += 1
-
-            self.sending(text)
-            num = int(self.reading(3)) #3桁指定されてから受け取る
-            result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
+        if count > 10:# 10回再送したらエラー吐く
+            raise ConnectionError("送りすぎ")
+        count += 1
+        print(f"{text}を送ったよ")
+        self.sending(text)
+        time.sleep(0.1)
+        self.sending("num")
+        time.sleep(0.1)
+        a = self.reading(1)
+        print(a)
+        print(type(a))
+        num = int(a) #1桁指定されてから受け取る
+        time.sleep(0.1)
+        self.sending("result")
+        time.sleep(0.1)
+        result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
+        print(result)
             
         return result
         

@@ -1,88 +1,79 @@
 #include <Wire.h>
-#include <string>
 
 #define SLAVE_ADDRESS 0x10
 
-String inputBuffer = "";     // 受信中の文字を溜めるバッファ
-String receivedMessage = ""; // '?' の直前までをまとめた文字列
-volatile bool isReady = false; // メッセージが完成したかどうかのフラグ
+volatile bool isReady = false;
+String receivedMessage = ""; 
 
-String send = ""; // 送信する文字
-String num = ""; // 送信する文字の長さ
+String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む   
+String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
+String cache = ""; // 文字型だったら適当に入れられる便利な奴
+String job = "rover";
+String sendLength = ""; // 送り返す文字の長さを保存しとく
 
 void setup() {
   Serial.begin(9600);
-  
-  // スレーブとしてI2Cバスに参加
   Wire.begin(SLAVE_ADDRESS);
-  
-  // イベントハンドラの設定
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
-  
+
   Serial.println("I2C Slave Ready.");
 }
 
 void loop() {  
-  // メッセージが完成（'?'を受信）したか確認
   if (isReady) {
-    // まとめられた文字列を取得
     String msg = getMessage();
-    // 取得した文字列を使った処理（例：シリアル出力）
-    send = TextCheck(msg);
-    // 文字数をカウント
-    num = CountText(send);
-
-    delay(100);
+    Serial.print("受信メッセージ: ");
+    Serial.println(msg);
+    TextCheck(msg);
+  }
+  
+  delay(10);
 }
 
-// 完成したメッセージを取得してフラグをクリアする関数
 String getMessage() {
+  noInterrupts();
   String temp = receivedMessage;
-  isReady = false; // 処理が終わったのでフラグを戻す
-  return temp;    // まとめられた文字列を返す
+  isReady = false;
+  interrupts();
+  return temp;    
 }
 
-String TextCheck(String text) {
-    if (text == "who") {
-        return "rover";
-    }
+void TextCheck(String receive) {
+  if (receive == "result") {
+    sendMsg = cache;
+  }
+
+  if (receive == "num") {
+    sendMsg = sendLength;
+  }
+
+  if (receive == "who") {
+    cache = job;
+    Serial.println(String(job.length()));
+    sendLength = String(job.length());
+  }
 }
 
-CountText(String text) {
-  std::string s = text;
-  return s.length();
-}
-
-// マスターからデータを受信したときの処理（割り込み処理）
+// 割り込み処理（Serial.printは使わない）
 void receiveEvent(int howMany) {
   while (Wire.available()) {
     char c = Wire.read();
     
     if (c == '?') {
-      // '?' が来たら、それまでに溜まった文字列を確定させる
-      Serial.print("送られてきた文字")
-      Serial.println(inputBuffer);
-
       receivedMessage = inputBuffer;
-      inputBuffer = ""; // 次の受信のためにバッファをリセット
-      isReady = true;   // 完成フラグを立てる
+      inputBuffer = "";
+      isReady = true;
     } else {
-      // '?' 以外の文字はバッファに1文字ずつ追加する
       inputBuffer += c;
     }
   }
 }
 
-// マスターからデータを要求されたときの処理
-int count = 0;
+// 割り込み処理（Serial.printは使わない）
 
 void requestEvent() {
-  if count == 0 {
-    Wire.write(num);
-    count = 1;
-  } else {
-    Wire.write(send); 
-    count = 0;
-  }
+  Serial.print("送信メッセージ: ");
+  Serial.println(sendMsg);
+  Wire.write(sendMsg.c_str());
 }

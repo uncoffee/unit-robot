@@ -1,6 +1,6 @@
-from json_to_dict import load_json
 from I2C import I2C_class ,scan_i2c_bus
 import importlib
+import time
 
 def create_instance(class_name, *args, **kwargs):
     try:
@@ -31,10 +31,6 @@ if obj:
 master_add = 0x01
 
 def start():
-    # スレーブの対応表(json)からdictに変換
-    json_file_path = "/home/souta/unit-robot/units.json"
-    result_dict = load_json(json_file_path)
-
     # i2c機器を探す
     slave_adds = scan_i2c_bus(master_add)
     print(f"スレーブID{slave_adds}が見つかりました")
@@ -43,12 +39,19 @@ def start():
 
     for slave_add in slave_adds:
         # i2c通信用のクラスからインスタンスを作成
-        i2c_inst = I2C_class(int(slave_add, 16))
-        slave_name = i2c_inst.ask("who",2)# そのスレーブが何なのか確認する
+        i2c_inst = I2C_class(int(slave_add,16))
+        slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
         print(f"{slave_name}が接続されていることを確認しました")
         UnitsDict[slave_name] = create_instance(slave_name,i2c_inst)
+        print("aaa")
 
     return UnitsDict
 
 if __name__ == "__main__":
     result = start()
+    print(result)
+    result["rover"].on()
+    time.sleep(5)
+    result["rover"].off()
+
+    
