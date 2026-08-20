@@ -11,4 +11,10 @@ class rover(moter):
 
     def off(self):
         self.sins.sending("off")
+
+    def go(self):
+        self.sins.sending("go")
+
+    def back(self):
+        self.sins.sending("back")
         

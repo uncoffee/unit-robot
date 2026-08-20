@@ -18,17 +18,6 @@ def create_instance(class_name, *args, **kwargs):
     except AttributeError:
         print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
     return None
-"""
-# --- 利用例 ---
-# 'my_library' モジュールの 'MyClass' を指定し、引数 "banana" を渡してインスタンス化
-obj = create_instance("my_library", "MyClass", "banana")
-
-if obj:
-    # 呼び出しテスト
-    print(obj.greet())  # 出力: こんにちは、bananaさん！
-"""
-
-master_add = 0x01
 
 def start():
     # i2c機器を探す
@@ -43,15 +32,14 @@ def start():
         slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
         print(f"{slave_name}が接続されていることを確認しました")
         UnitsDict[slave_name] = create_instance(slave_name,i2c_inst)
-        print("aaa")
+
 
     return UnitsDict
 
+master_add = 0x01
 if __name__ == "__main__":
     result = start()
     print(result)
-    result["rover"].on()
+    result["rover"].go()
     time.sleep(5)
-    result["rover"].off()
-
-    
+    result["rover"].back()   

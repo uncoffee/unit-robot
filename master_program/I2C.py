@@ -59,20 +59,16 @@ class I2C_class:
         if count > 10:# 10回再送したらエラー吐く
             raise ConnectionError("送りすぎ")
         count += 1
-        print(f"{text}を送ったよ")
         self.sending(text)
         time.sleep(0.1)
         self.sending("num")
         time.sleep(0.1)
         a = self.reading(1)
-        print(a)
-        print(type(a))
         num = int(a) #1桁指定されてから受け取る
         time.sleep(0.1)
         self.sending("result")
         time.sleep(0.1)
         result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
-        print(result)
             
         return result
         
