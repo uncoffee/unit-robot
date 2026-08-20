@@ -38,8 +38,8 @@ def start():
 
 master_add = 0x01
 if __name__ == "__main__":
-    result = start()
+    units = start()
     print(result)
-    result["rover"].go()
+    units["rover"].go()
     time.sleep(5)
-    result["rover"].back()   
+    units["rover"].back()   
