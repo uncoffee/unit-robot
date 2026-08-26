@@ -5,28 +5,31 @@ class I2C_class:
     def __init__(self, slave_id, bus_number=1):
         self.slave_id = slave_id
         self.bus_number = bus_number
+        self.timesleep = 0.1
 
-    def sending(self, raw_text):
+    def sending(self, *args:str | int):
         """
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列
         """
-
-        text = raw_text + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
-        try:
-            # 文字列をバイト列に変換
-            data_bytes = list(text.encode('utf-8'))
-            
-            with SMBus(self.bus_number) as bus:
-                # self.slave_id を使用して書き込みメッセージを作成
-                write_msg = i2c_msg.write(self.slave_id, data_bytes)
-                bus.i2c_rdwr(write_msg)
+        for raw_text in *args:
+            time.sleep(self.timesleep)
+            text = raw_text + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
+            try:
+                # 文字列をバイト列に変換
+                data_bytes = list(text.encode('utf-8'))
                 
-            print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
-        except Exception as e:
-            print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
+                with SMBus(self.bus_number) as bus:
+                    # self.slave_id を使用して書き込みメッセージを作成
+                    write_msg = i2c_msg.write(self.slave_id, data_bytes)
+                    bus.i2c_rdwr(write_msg)
+                    
+                print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
+            except Exception as e:
+                print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
 
     def reading(self, num):
+        time.sleep(self.timesleep)
         """
         インスタンスに設定された self.slave_id から指定したバイト数分のデータを受信する
         :param num: 受信するバイト数
@@ -52,22 +55,12 @@ class I2C_class:
             print(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
             return None
         
-    def ask(self, text):
-        count = 0 
-        result = None
-
-        if count > 10:# 10回再送したらエラー吐く
-            raise ConnectionError("送りすぎ")
-        count += 1
-        self.sending(text)
-        time.sleep(0.1)
+    def ask(self, *args:str | int):
+        self.sending(*args)
         self.sending("num")
-        time.sleep(0.1)
         a = self.reading(1)
         num = int(a) #1桁指定されてから受け取る
-        time.sleep(0.1)
         self.sending("result")
-        time.sleep(0.1)
         result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
             
         return result
