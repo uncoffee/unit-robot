@@ -7,7 +7,7 @@ class I2C_class:
         self.bus_number = bus_number
         self.timesleep = 0.1
 
-    def sending(self, *args:str | int):
+    def sending(self, *args:str | int | float):
         """
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列

@@ -11,6 +11,11 @@ String cache = ""; // 文字型だったら適当に入れられる便利な奴
 String job = "rover";
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
+// ピン配置の設定
+const int MOTOR_IN1 = 14; // GP14 に相当するピン
+const int MOTOR_IN2 = 15; // GP15 に相当するピン
+const int LED_PIN   = 13; // Arduino Uno などの標準内蔵LED（ピン13）
+
 void setup() {
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS);
@@ -40,7 +45,7 @@ void loop() {
   
   if (go) {
     // 1. スピード50%で前進
-    Serial.println("前進（スピード50%） - LED点灯");
+    Serial.println("前進 - LED点灯");
     motorMove(50, "forward");
     delay(3000); // 3秒待機
 
@@ -54,7 +59,7 @@ void loop() {
 
   if (back) {
     // 3. スピード100%で後退
-    Serial.println("後退（スピード100%） - LED点灯");
+    Serial.println("後退 - LED点灯");
     motorMove(100, "backward");
     delay(3000); // 3秒待機
 
@@ -119,21 +124,9 @@ void receiveEvent(int howMany) {
 }
 
 // 割り込み処理（Serial.printは使わない）
-
 void requestEvent() {
-  Serial.print("送信メッセージ: ");
-  Serial.println(sendMsg);
   Wire.write(sendMsg.c_str());
 }
-
-// ピン配置の設定
-const int MOTOR_IN1 = 14; // GP14 に相当するピン
-const int MOTOR_IN2 = 15; // GP15 に相当するピン
-const int LED_PIN   = 13; // Arduino Uno などの標準内蔵LED（ピン13）
-
-// 動作フラグ（必要に応じて true に変更して使用してください）
-bool go   = false;
-bool back = false;
 
 // モーターを停止する関数
 void motorStop() {
