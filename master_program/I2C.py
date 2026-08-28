@@ -12,9 +12,9 @@ class I2C_class:
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列
         """
-        for raw_text in *args:
+        for raw_text in args:
             time.sleep(self.timesleep)
-            text = raw_text + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
+            text = str(raw_text) + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
             try:
                 # 文字列をバイト列に変換
                 data_bytes = list(text.encode('utf-8'))

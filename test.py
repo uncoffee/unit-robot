@@ -1,4 +1,1 @@
-dict1 = {
-    "key1":"hallo"
-}
-print(dict1.get("key2"))
+from master_program.setup import setup
