@@ -20,9 +20,37 @@ int speed = 50; // 速さ
 int time = 0;
 
 // ピン配置の設定
-const int MOTOR_IN1 = 14; // GP14 に相当するピン
-const int MOTOR_IN2 = 15; // GP15 に相当するピン
-const int LED_PIN   = 13; // Arduino Uno などの標準内蔵LED（ピン13）
+"""
+GPIOピン
+割り当て・用途
+
+GP14
+モーター1 正転制御（RPWM）
+
+GP15
+モーター1 逆転制御（LPWM）
+
+GP10
+モーター2 正転制御（RPWM）
+
+GP11
+モーター2 逆転制御（LPWM）
+
+GP16
+外部切替スイッチ
+
+GP25
+内蔵LED
+"""
+const int MOTOR_FRONT1 = 14 //前進のPIN1
+const int MOTOR_BACK1 = 15 //後退のPIN1
+
+const int MOTOR_FRONT2 = 10 //前進のPIN2
+const int MOTOR_BACK2 = 11 //後退のPIN2
+
+const int gaibukirikaesuicchi = 16 //謎の外部切り替えスイッチ　俺はこれについて知りません。
+
+const int LED_PIN = 25; // Arduino Uno などの標準内蔵LED（ピン13）
 
 //処理の設定
 const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
@@ -39,8 +67,14 @@ void setup() {
   Serial.begin(9600);
 
   // ピンのモード設定
-  pinMode(MOTOR_IN1, OUTPUT);
-  pinMode(MOTOR_IN2, OUTPUT);
+  pinMode(MOTOR_FRONT1, OUTPUT);
+  pinMode(MOTOR_FRONT2, OUTPUT);
+  
+  pinMode(MOTOR_BACK1, OUTPUT);
+  pinMode(MOTOR_BACK2, OUTPUT);
+
+  pinMode(gaibukirikaesuicchi, OUTPUT);
+
   pinMode(LED_PIN, OUTPUT);
 
   // 初期状態は停止
@@ -119,8 +153,12 @@ String getMessage() {
 
 // モーターを停止する関数
 void motorStop() {
-  analogWrite(MOTOR_IN1, 0); // 出力を0にする
-  analogWrite(MOTOR_IN2, 0);
+  analogWrite(MOTOR_FRONT1, 0);
+  analogWrite(MOTOR_FRONT2, 0);
+  
+  analogWrite(MOTOR_BACK1, 0);
+  analogWrite(MOTOR_BACK2, 0);
+
   digitalWrite(LED_PIN, LOW); // LED消灯
 }
 
@@ -130,21 +168,20 @@ void Move() {
   int duty = map(speed, 0, 100, 0, 255);
 
   if (direction == "go") {
-    analogWrite(MOTOR_IN1, duty);
-    analogWrite(MOTOR_IN2, 0);
+    motorStop();
+    analogWrite(MOTOR_FRONT1, duty);
+    analogWrite(MOTOR_FRONT2, duty);
     digitalWrite(LED_PIN, HIGH); // LED点灯
-  } 
-  else if (direction == "back") {
-    analogWrite(MOTOR_IN1, 0);
-    analogWrite(MOTOR_IN2, duty);
+  } else if (direction == "back") {
+    motorStop();
+    analogWrite(MOTOR_BACK1, duty);
+    analogWrite(MOTOR_BACK2, duty);
     digitalWrite(LED_PIN, HIGH); // LED点灯
-  }else if (direction == "led") {
+  } else if (direction == "led") {
     digitalWrite(LED_PIN, HIGH);
-  }else{
-    analogWrite(MOTOR_IN1, 0); // 出力を0にする
-    analogWrite(MOTOR_IN2, 0);
-    digitalWrite(LED_PIN, LOW); // LED消灯
   }
+
+  direction = "";
 }
 
 void loop() {
@@ -154,19 +191,19 @@ void loop() {
   if (currentMillis - previousMillis >= blank) {
     previousMillis = currentMillis; // 時間を更新
 
-      // ここに定期実行したい処理を書く
+    // ここに定期実行したい処理を書く
     if (isReady) {
       String msg = getMessage();
       Serial.println("受信メッセージ: ");
       Serial.println(msg);
       decode_task(msg);
-    }
-    if (time > 0) {
       Move();
-      time = time - 1;
-    }else{
+    }
+
+    if (time > 0) {
+      time = time - 1; // time はint型なのでNoProblem!
+    }else if (time = 0) {
       motorStop();
-      direction = "none";
     }
   }
 }
