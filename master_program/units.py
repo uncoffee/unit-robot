@@ -16,14 +16,14 @@ class rover(units):
         super().__init__(slave_instance)
 
     def led(self,time:int)  -> None:
-        self.ins.sending("on",time) #units["rover"].onで作動。ユニット制御のマイコンのランプが光る関数。主に通信確認やプログラムの動作確認に使う想定。
+        self.ins.sending("led",time) #units["rover"].onで作動。ユニット制御のマイコンのランプが光る関数。主に通信確認やプログラムの動作確認に使う想定。
 
     def go(self,cm:int) -> None:
-        time = cm / self.SpinTime
+        time = cm / self.CM_S
         self.ins.sending("go",time) #units["rover"].goで作動。ローバー(機体)が前に進む関数。現在地から前に進みたいときに使用する。
 
     def back(self,cm:int) -> None:
-        time = cm / self.SpinTime
+        time = cm / self.CM_S
         self.ins.sending("back",time)#units["rover"].backで作動。ローバー(機体)が後ろに戻る関数。現在地から後ろに戻りたいときに使用する。
 
     """

@@ -41,7 +41,9 @@ if __name__ == "__main__":
     units = start()
     print(units)
     print(type(units["rover"]))
-    units["rover"].led(3)
+    units["rover"].go(180)
+    time.sleep(5.0)
+    units["rover"].back(180)
 
     if False:
         units["rover"].go()

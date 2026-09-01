@@ -16,41 +16,19 @@ String sendLength = ""; // 送り返す文字の長さを保存しとく
 //ユニット固有の変数を宣言
 const String job = "rover";
 String direction = ""; // 動きの命令:"stop"停止,"go"前進,"back"後退,"left"左に動く,"right"右に動く
-int speed = 50; // 速さ
-int time = 0;
+int speed = 100; // 速さ
+int time = -1;
 
 // ピン配置の設定
-"""
-GPIOピン
-割り当て・用途
+const int MOTOR_FRONT1 = 11; //前進のPIN1
+const int MOTOR_BACK1 = 12; //後退のPIN1
 
-GP14
-モーター1 正転制御（RPWM）
+const int MOTOR_FRONT2 = 9; //前進のPIN2
+const int MOTOR_BACK2 = 10; //後退のPIN2
 
-GP15
-モーター1 逆転制御（LPWM）
+const int gaibukirikaesuicchi = 16; //謎の外部切り替えスイッチ　俺はこれについて知りません。
 
-GP10
-モーター2 正転制御（RPWM）
-
-GP11
-モーター2 逆転制御（LPWM）
-
-GP16
-外部切替スイッチ
-
-GP25
-内蔵LED
-"""
-const int MOTOR_FRONT1 = 14 //前進のPIN1
-const int MOTOR_BACK1 = 15 //後退のPIN1
-
-const int MOTOR_FRONT2 = 10 //前進のPIN2
-const int MOTOR_BACK2 = 11 //後退のPIN2
-
-const int gaibukirikaesuicchi = 16 //謎の外部切り替えスイッチ　俺はこれについて知りません。
-
-const int LED_PIN = 25; // Arduino Uno などの標準内蔵LED（ピン13）
+const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
 
 //処理の設定
 const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
@@ -83,6 +61,8 @@ void setup() {
 
 //マスターからの命令に対応した動作
 void decode_task(String receive) {
+  Serial.print("receive:");
+  Serial.println(receive);
   //通信用の命令受付
   if (receive == "result") {
     sendMsg = cache;
@@ -96,6 +76,13 @@ void decode_task(String receive) {
     cache = job;
     Serial.println(String(job.length()));
     sendLength = String(job.length());
+  }
+
+  // 不都合が生じるため前処理にしておくelse ifは知らない。
+    if (need_time) {
+    time = receive.toInt() * 1000 / blank;
+    Serial.println(time);
+    need_time = false;
   }
 
   //メインの命令受付
@@ -115,10 +102,6 @@ void decode_task(String receive) {
     direction = "led";
     Serial.println("led");
     need_time = true;
-  }
-
-  if (need_time) {
-    time = receive.toInt() * 1000 / blank;
   }
 }
 
@@ -153,32 +136,32 @@ String getMessage() {
 
 // モーターを停止する関数
 void motorStop() {
-  analogWrite(MOTOR_FRONT1, 0);
-  analogWrite(MOTOR_FRONT2, 0);
+  analogWrite(MOTOR_FRONT1, LOW);
+  analogWrite(MOTOR_FRONT2, LOW);
   
-  analogWrite(MOTOR_BACK1, 0);
-  analogWrite(MOTOR_BACK2, 0);
+  analogWrite(MOTOR_BACK1, LOW);
+  analogWrite(MOTOR_BACK2, LOW);
 
   digitalWrite(LED_PIN, LOW); // LED消灯
 }
 
 // モーターを動かす関数（speedは 0〜100 % で指定）
-void Move() {
+void move() {
   // 0〜100% の値を Arduino の PWM 範囲（0〜255）に変換
   int duty = map(speed, 0, 100, 0, 255);
 
   if (direction == "go") {
-    motorStop();
     analogWrite(MOTOR_FRONT1, duty);
     analogWrite(MOTOR_FRONT2, duty);
-    digitalWrite(LED_PIN, HIGH); // LED点灯
+    digitalWrite(LED_PIN, duty); // LED点灯
+    Serial.println("もーたーおん");
   } else if (direction == "back") {
-    motorStop();
     analogWrite(MOTOR_BACK1, duty);
     analogWrite(MOTOR_BACK2, duty);
-    digitalWrite(LED_PIN, HIGH); // LED点灯
+    Serial.println("もーたーおふ");
+    digitalWrite(LED_PIN, duty); // LED点灯
   } else if (direction == "led") {
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(LED_PIN, duty);
   }
 
   direction = "";
@@ -197,13 +180,19 @@ void loop() {
       Serial.println("受信メッセージ: ");
       Serial.println(msg);
       decode_task(msg);
-      Move();
+      
     }
 
     if (time > 0) {
+      if (direction != "") {
+        move();
+
+      }
       time = time - 1; // time はint型なのでNoProblem!
-    }else if (time = 0) {
+    }else if (time == 0) {
       motorStop();
+      time = -1;
+      Serial.println("動き終わり");
     }
   }
 }
