@@ -2,50 +2,53 @@ from I2C import I2C_class ,scan_i2c_bus
 import importlib
 import time
 
-def create_instance(class_name:str, *args:any):
-    try:
-        # 1. 文字列からモジュールを動的にインポート
-        module = importlib.import_module("units")
+class UnitsDict(dict):
+    def stop(self):
+        for i in self.values():
+            i.stop()
+
+class setup:
+    def create_instance(class_name:str, *args:any):
+        try:
+            # 1. 文字列からモジュールを動的にインポート
+            module = importlib.import_module("units")
+            
+            # 2. モジュールから「文字列の指定に一致するクラス」を取得
+            TargetClass = getattr(module, class_name)
+            
+            # 3. 取得したクラスをインスタンス化して返す
+            # (*args, **kwargs を渡すことで、引数があるコンストラクタにも対応)
+            print(*args)
+            instance = TargetClass(*args)
+            return instance
         
-        # 2. モジュールから「文字列の指定に一致するクラス」を取得
-        TargetClass = getattr(module, class_name)
-        
-        # 3. 取得したクラスをインスタンス化して返す
-        # (*args, **kwargs を渡すことで、引数があるコンストラクタにも対応)
-        print(*args)
-        instance = TargetClass(*args)
-        return instance
-    
-    except AttributeError:
-        print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
-        
+        except AttributeError:
+            print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
 
-def start() -> dict:
-    # i2c機器を探す
-    slave_adds = scan_i2c_bus(master_add)
-    print(f"スレーブID{slave_adds}が見つかりました")
+    def units_info() -> dict:
+        # i2c機器を探す
+        slave_adds = scan_i2c_bus(master_add)
+        print(f"スレーブID{slave_adds}が見つかりました")
 
-    UnitsDict = {}
+        UniDic = UnitsDict()
 
-    for slave_add in slave_adds:
-        # i2c通信用のクラスからインスタンスを作成
-        i2c_inst = I2C_class(int(slave_add,16))
-        slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
-        print(f"{slave_name}が接続されていることを確認しました")
-        UnitsDict[slave_name] = create_instance(slave_name,i2c_inst)
+        for slave_add in slave_adds:
+            # i2c通信用のクラスからインスタンスを作成
+            i2c_inst = I2C_class(int(slave_add,16))
+            slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
+            print(f"{slave_name}が接続されていることを確認しました")
+            UniDic[slave_name] = setup.create_instance(slave_name,i2c_inst)
 
-        return UnitsDict
+            return UniDic
     
 master_add = 0x01
 if __name__ == "__main__":
-    units = start()
+    units = setup.units_info()
     print(units)
     print(type(units["rover"]))
-    units["rover"].go(180)
+    units["rover"].led(True)
     time.sleep(5.0)
-    units["rover"].back(180)
+    units["rover"].led(False)
 
-    if False:
-        units["rover"].go()
-        time.sleep(5)
-        units["rover"].back()   
+
+    units.stop()
