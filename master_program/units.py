@@ -4,7 +4,7 @@ class units:
         self.cache = dict()
 
     def stop(self) -> None:
-        self.ins.sending("stop") #強制停止
+        self.ins.send("stop") #強制停止
 
 class rover(units):
     def __init__(self,slave_instance):
@@ -12,19 +12,24 @@ class rover(units):
 
     def led(self,switch:bool)  -> None:
         if (switch):
-            self.ins.sending("led_on")
+            self.ins.send("led_on")
         else:
-            self.ins.sending("led_off")
+            self.ins.send("led_off")
 
     def go(self,time:int) -> None:
-        self.ins.sending("rf","lf","time",time)
+        self.ins.send("rf","lf","time",time)
 
     def back(self,time:int) -> None:
-        self.ins.sending("rb","lb","time",time)
+        self.ins.send("rb","lb","time",time)
 
     def right(self,time:int) -> None:
-        self.ins.sending("rb","lf","time",time)
+        self.ins.send("rb","lf","time",time)
 
     def left(self,time:int) -> None:
-        self.ins.sending("rf","lb","time",time)
-        
+        self.ins.send("rf","lb","time",time)
+
+    def set_speed(self,speed:int) -> None:
+        self.ins.send("speed",speed)
+
+    def get_speed(self) -> int:
+        return int(self.ins.ask("whatspeed"))

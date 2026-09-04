@@ -20,7 +20,7 @@ const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以�
 
 //通信に使う変数を宣言
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
-bool need_time = false; // 稼働時間を受け取るときは真になる
+String get_info = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
 String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
@@ -84,14 +84,22 @@ void decode_task(String receive) {
     left = false;
   }
 
-
+  if (receive == "whatspeed") {
+    cache = String(speed);
+  }
 
   if (receive == "time") {
-    need_time = true;
-  } else if (need_time) {
+    get_info = "time";
+  } else if (get_info == "time") {
     time = receive.toInt() * 1000 / blank;
-    Serial.println(time);
-    need_time = false;
+    get_info = "";
+  }
+
+  if (receive == "speed") {
+    get_info = "speed";
+  } else if (get_info == "speed") {
+    speed = receive.toInt();
+    get_info = "";
   }
 }
 
@@ -99,7 +107,7 @@ void decode_task(String receive) {
 void stop() {
   //通信に使う変数を宣言
   isReady = false;
-  need_time = false;
+  get_info = "";
   inputBuffer = "";
   receivedMessage = "";
   sendMsg = "";
@@ -141,6 +149,7 @@ String getMessage() {
   interrupts();
   return temp;
 }
+
 void l_switch() {
   if (led) {
     digitalWrite(LED_PIN, HIGH); // LED消灯
