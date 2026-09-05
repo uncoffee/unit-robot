@@ -1,11 +1,9 @@
 from master_program.unitstart import setup
 import time
 
-#テストコード
-if __name__ == "__main__":
-    master_add = 0x01
-    units = setup.setup(master_add)
+units = any
 
+def rover_test():
     print(units)
     print(type(units["rover"]))
     units["rover"].led(True)
@@ -26,3 +24,10 @@ if __name__ == "__main__":
     time.sleep(3)
     units.stop()
     print(units["rover"].get_speed())
+
+
+#テストコード
+if __name__ == "__main__":
+    master_add = 0x01
+    units = setup.setup(master_add)
+

@@ -1,24 +1,15 @@
 #include <Wire.h>
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
-//スレーブID
-#define SLAVE_ADDRESS 0x10
-
-// ピン配置の設定
-const int MOTOR_FRONT_R = 11; //前進のPIN1
-const int MOTOR_BACK_R = 12; //後退のPIN1
-
-const int MOTOR_FRONT_L = 9; //前進のPIN2
-const int MOTOR_BACK_L = 10; //後退のPIN2
-
+// 変更禁止ゾーン
+// ピン配置の定義
 const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
 
-const String job = "rover"; //ユニット固有の変数を宣言
+bool led = false;
+int time = 0; // 0->停止　100->100秒後停止
 
-const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
+unsigned long previousMillis = 0;
 
-
-//通信に使う変数を宣言
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
 String get_info = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
@@ -27,16 +18,24 @@ String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String cache = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
-//モータ切り替え true->前進 false->後退
+
+// ここから下は自由にしてくれ。
+#define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
+const String job = "rover"; //ユニット固有の変数を宣言
+const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
+
+// ピン配置の定義
+const int MOTOR_FRONT_R = 11; //前進のPIN1
+const int MOTOR_BACK_R = 12; //後退のPIN1
+
+const int MOTOR_FRONT_L = 9; //前進のPIN2
+const int MOTOR_BACK_L = 10; //後退のPIN2
+
+// プログラムで使うグローバル変数
 bool right = true;
 bool left = true;
-
-bool led = false;
-
+bool motorflag = false;
 int speed = 100; // 0->停止　100->全速前進
-int time = 0; // 0->停止　100->100秒後停止
-
-unsigned long previousMillis = 0;
 
 
 
@@ -59,7 +58,6 @@ void decode_task(String receive) {
     stop();
   }
 
-  //メインの命令受付
   if (receive == "led_on") {
     led = true;
   }
@@ -68,6 +66,14 @@ void decode_task(String receive) {
     led = false;
   }
 
+  if (receive == "settime") {
+    get_info = "time";
+  } else if (get_info == "time") {
+    time = receive.toInt() * 1000 / blank;
+    get_info = "";
+  }
+
+  //ここから下に追加する
   if (receive == "rf") {
     right = true;
   }
@@ -84,15 +90,12 @@ void decode_task(String receive) {
     left = false;
   }
 
-  if (receive == "whatspeed") {
-    cache = String(speed);
+  if (reveive == "motor") {
+    motorflag = true;
   }
 
-  if (receive == "time") {
-    get_info = "time";
-  } else if (get_info == "time") {
-    time = receive.toInt() * 1000 / blank;
-    get_info = "";
+  if (receive == "whatspeed") {
+    cache = String(speed);
   }
 
   if (receive == "speed") {
@@ -150,6 +153,7 @@ String getMessage() {
   return temp;
 }
 
+// 内蔵ledの制御
 void l_switch() {
   if (led) {
     digitalWrite(LED_PIN, HIGH); // LED消灯
@@ -157,36 +161,33 @@ void l_switch() {
     digitalWrite(LED_PIN, LOW); // LED消灯
   }
 }
-
-// モーターを停止する関数
-void moterstop() {
-  analogWrite(MOTOR_FRONT_R, LOW);
-  analogWrite(MOTOR_FRONT_L, LOW);
-  
-  analogWrite(MOTOR_BACK_R, LOW);
-  analogWrite(MOTOR_BACK_L, LOW);
-}
-
-// モーターを動かす関数（speedは 0〜100 % で指定）
+// ここから固有の関数
+// モーターを動かす関数
 void move() {
-  // 0〜100% の値を Arduino の PWM 範囲（0〜255）に変換
-  int duty = map(speed, 0, 100, 0, 255);
+  if (motorflag) {
+    int duty = map(speed, 0, 100, 0, 255);
+    motorstop();
 
-  moterstop();
+    if (right) {
+      analogWrite(MOTOR_FRONT_R, duty);
+    } else {
+      analogWrite(MOTOR_BACK_R, duty);
+    }
 
-  if (right) {
-    analogWrite(MOTOR_FRONT_R, duty);
+    if (left) {
+      analogWrite(MOTOR_FRONT_L, duty);
+    } else {
+      analogWrite(MOTOR_BACK_L, duty);
+    }
   } else {
-    analogWrite(MOTOR_BACK_R, duty);
-  }
-
-  if (left) {
-    analogWrite(MOTOR_FRONT_L, duty);
-  } else {
-    analogWrite(MOTOR_BACK_L, duty);
+    analogWrite(MOTOR_FRONT_R, LOW);
+    analogWrite(MOTOR_FRONT_L, LOW);
+    
+    analogWrite(MOTOR_BACK_R, LOW);
+    analogWrite(MOTOR_BACK_L, LOW);
   }
 }
-
+//ここまで
 void setup() {
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS);
@@ -206,7 +207,7 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
 
   // 初期状態は停止
-  moterstop();
+  motorstop();
 }
 
 void loop() {
@@ -229,7 +230,7 @@ void loop() {
       move();
       time = time - 1; // time はint型なのでNoProblem!
     } else if (time < 1) {
-      moterstop();
+      motorflag = false;
     }
   }
 }

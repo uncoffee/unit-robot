@@ -15,7 +15,7 @@ try:
             
             # $GPRMC や $GPGGA など、GPS特有のデータが表示されます
             if line:
-                with open("result", 'a', encoding='utf-8') as f:
+                with open("result.txt", 'a', encoding='utf-8') as f:
                     f.write(line + '\n')
 
 except serial.SerialException as e:
