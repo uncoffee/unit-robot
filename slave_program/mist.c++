@@ -28,7 +28,7 @@ bool sprayflag = false; // ミスト制御
 
 
 //マスターからの命令に対応した動作
-void decode_task(String receive) {
+void tasks(String receive) {
   if (receive == "result") {
     sendMsg = cache;
   }
@@ -111,6 +111,8 @@ void requestEvent() {
   Wire.write(sendMsg.c_str());
 }
 
+
+
 // 内蔵ledの制御
 void l_switch() {
   if (led) {
@@ -158,7 +160,7 @@ void loop() {
   String msg = getMessage();
   Serial.println("受信メッセージ: ");
   Serial.println(msg);
-  decode_task(msg);
+  decode_task(tasks ,msg);
   }
 
   // 前回の実行から指定時間が経過したかチェック

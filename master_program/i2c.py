@@ -8,25 +8,27 @@ class I2C_class:
         self.timesleep = 0.1
 
     def send(self, *args:str | int | float):
+        send_text = ""
         """
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列
         """
         for raw_text in args:
-            time.sleep(self.timesleep)
-            text = str(raw_text) + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
-            try:
-                # 文字列をバイト列に変換
-                data_bytes = list(text.encode('utf-8'))
+            send_text = send_text + str(raw_text) + "?" # スレイブ側で文字の文末を理解するために「?」をつける
+
+        data_bytes = list(send_text.encode('utf-8'))
+        try:
+            # 文字列をバイト列に変換
+            
+            
+            with SMBus(self.bus_number) as bus:
+                # self.slave_id を使用して書き込みメッセージを作成
+                write_msg = i2c_msg.write(self.slave_id, data_bytes)
+                bus.i2c_rdwr(write_msg)
                 
-                with SMBus(self.bus_number) as bus:
-                    # self.slave_id を使用して書き込みメッセージを作成
-                    write_msg = i2c_msg.write(self.slave_id, data_bytes)
-                    bus.i2c_rdwr(write_msg)
-                    
-                print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
-            except Exception as e:
-                print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
+            print(f"[Success] Sent to {hex(self.slave_id)}: '{send_text}'")
+        except Exception as e:
+            print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
 
     def read(self, num):
         time.sleep(self.timesleep)

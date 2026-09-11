@@ -4,7 +4,7 @@
 
 // 変更禁止ゾーン
 // ピン配置の定義
-const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
+const int LED_PIN = 13; // Arduino nano などの標準内蔵LED（ピン13）
 
 bool led = false;
 int time = 0; // 0->停止　100->100秒後停止
@@ -19,17 +19,19 @@ String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String cache = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
-
 // ここから下は自由にしてくれ。
 #define SLAVE_ADDRESS 0x10 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
-const String job = "unit_name"; //ユニット固有の変数を宣言
+const String job = "sensor"; //ユニット固有の変数を宣言
+
+const int SENSOR_VCC = 12;
+const int TEMP = 11;
+const int HUMI = 10;
+const int PRES = 9;
 
 const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
 
-
-
-//マスターからの命令に対応した動作 voidじゃないとだめ。
-void tasks(String receive) {
+//マスターからの命令に対応した動作
+void decode_task(String receive) {
   if (receive == "result") {
     sendMsg = cache;
   }

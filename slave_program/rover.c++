@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include "i2c.hpp"
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
@@ -40,7 +41,7 @@ int speed = 100; // 0->停止　100->全速前進
 
 
 //マスターからの命令に対応した動作
-void decode_task(String receive) {
+void tasks(String receive) {
   //通信用の命令受付
   if (receive == "result") {
     sendMsg = cache;
@@ -215,7 +216,7 @@ void loop() {
   String msg = getMessage();
   Serial.println("受信メッセージ: ");
   Serial.println(msg);
-  decode_task(msg);
+  decode_task(tasks ,msg);
   }
 
   // 前回の実行から指定時間が経過したかチェック
