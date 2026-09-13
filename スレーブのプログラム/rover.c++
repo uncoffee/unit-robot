@@ -1,8 +1,11 @@
 #include <Wire.h>
+#include <avr/wdt.h>
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 //スレーブID
 #define SLAVE_ADDRESS 0x10
+
+bool reboot_bool = false;
 
 // ピン配置の設定
 const int MOTOR_FRONT_R = 11; //前進のPIN1
@@ -15,7 +18,7 @@ const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
 
 const String job = "rover"; //ユニット固有の変数を宣言
 
-const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
+const int blank_time = 20; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
 
 
 //通信に使う変数を宣言
@@ -38,60 +41,95 @@ int time = 0; // 0->停止　100->100秒後停止
 
 unsigned long previousMillis = 0;
 
-
+//追加したタスクをここに設定する
+void addtasks() {
+  //aaaaaaaaa
+  return;
+}
 
 //マスターからの命令に対応した動作
-void decode_task(String receive) {
+void tasks(String receive) {
   //通信用の命令受付
   if (receive == "result") {
     sendMsg = cache;
+    return;
   }
 
   if (receive == "num") {
     sendMsg = String(cache.length());
+    return;
   }
 
   if (receive == "who") {
     cache = job;
+    return;
   }
 
-  if (receive == "stop") { 
-    stop();
+  if (receive == "reboot") { 
+    reboot_bool = ture;
+    return;
   }
 
   //メインの命令受付
   if (receive == "led_on") {
     led = true;
+    return;
   }
 
   if (receive == "led_off") {
     led = false;
+    return;
   }
 
   if (receive == "rf") {
     right = true;
+    return;
   }
 
   if (receive == "rb") {
     right = false;
+    return;
   }
 
   if (receive == "lf") {
     left = true;
+    return;
   }
 
   if (receive == "lb") {
     left = false;
+    return;
   }
-
-
 
   if (receive == "time") {
     need_time = true;
-  } else if (need_time) {
-    time = receive.toInt() * 1000 / blank;
-    Serial.println(time);
+    return;
+  } 
+  
+  if (need_time) {
+    time = receive.toInt() * 1000 / blank_time;
     need_time = false;
+    return;
+  }
+
+  addtasks();
+}
+
+//定期処理にする関数　※millis()の引数は経過時間をmsで返してくる
+bool blank_def() {
+  int now = millis();
+  if (now - millis() >= blank_time) {
+    time -= 1;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void default_process() {
+  if (reboot_bool) {
+  wdt_enable(WDTO_15MS); // 15ミリ秒後にタイムアウトするように設定
+  while (1) {}           // タイムアウトまで無限ループして待つ
   }
 }
 
@@ -198,6 +236,9 @@ void setup() {
 
   // 初期状態は停止
   moterstop();
+
+  // setupの最初でウォッチドッグを無効化（リセットループ防止）
+  wdt_disable();
 }
 
 void loop() {
@@ -209,9 +250,8 @@ void loop() {
   }
 
   // 前回の実行から指定時間が経過したかチェック
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= blank) {
-    previousMillis = currentMillis;
+  unsigned long currentMillis = 
+  if (blank_def()) {
     // ここに定期実行したい処理を書く
 
     l_switch();
