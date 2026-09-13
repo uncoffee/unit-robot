@@ -7,28 +7,30 @@ class I2C_class:
         self.bus_number = bus_number
         self.timesleep = 0.1
 
-    def sending(self, *args:str | int | float):
+    def send(self, *args:str | int | float):
+        send_text = ""
         """
         インスタンスに設定された self.slave_id に対して文字列を送信する
         :param text: 送信する文字列
         """
         for raw_text in args:
-            time.sleep(self.timesleep)
-            text = str(raw_text) + "?" # スレイブ側で送信終了を検知するための「?」を末尾につける
-            try:
-                # 文字列をバイト列に変換
-                data_bytes = list(text.encode('utf-8'))
-                
-                with SMBus(self.bus_number) as bus:
-                    # self.slave_id を使用して書き込みメッセージを作成
-                    write_msg = i2c_msg.write(self.slave_id, data_bytes)
-                    bus.i2c_rdwr(write_msg)
-                    
-                print(f"[Success] Sent to {hex(self.slave_id)}: '{text}'")
-            except Exception as e:
-                print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
+            send_text = send_text + str(raw_text) + "?" # スレイブ側で文字の文末を理解するために「?」をつける
 
-    def reading(self, num):
+        data_bytes = list(send_text.encode('utf-8'))
+        try:
+            # 文字列をバイト列に変換
+            
+            
+            with SMBus(self.bus_number) as bus:
+                # self.slave_id を使用して書き込みメッセージを作成
+                write_msg = i2c_msg.write(self.slave_id, data_bytes)
+                bus.i2c_rdwr(write_msg)
+                
+            print(f"[Success] Sent to {hex(self.slave_id)}: '{send_text}'")
+        except Exception as e:
+            print(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
+
+    def read(self, num):
         time.sleep(self.timesleep)
         """
         インスタンスに設定された self.slave_id から指定したバイト数分のデータを受信する
@@ -55,13 +57,13 @@ class I2C_class:
             print(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
             return None
         
-    def ask(self, *args:str | int):
-        self.sending(*args)
-        self.sending("num")
-        a = self.reading(1)
+    def ask(self, question: str | int) -> str | int:
+        self.send(question)
+        self.send("num")
+        a = self.read(1)
         num = int(a) #1桁指定されてから受け取る
-        self.sending("result")
-        result = str(self.reading(num)) #c++のほうが上手くいけば多分大丈夫
+        self.send("result")
+        result = str(self.read(num)) #c++のほうが上手くいけば多分大丈夫
             
         return result
         
@@ -70,21 +72,18 @@ if __name__ == "__main__":
     # スレイブアドレス 0x08 用のインスタンスを作成
     device = I2C_class(slave_id=0x10)
     
-    # 1. 送信 (sending)
+    # 1. 送信 (send)
     # 引数に slave_id を渡す必要がなくなり、スッキリします
-    device.sending("Hello!")
+    device.send("Hello!")
     
     time.sleep(0.1)
     
-    # 2. 受信 (reading)
+    # 2. 受信 (read)
     # こちらもバイト数を指定するだけで、設定された slave_id から読み込みます
-    print("Reading from slave...")
-    data = device.reading(3)
+    print("read from slave...")
+    data = device.read(3)
     print(f"Received: {data}")
 
-
-
-#-------------------------------------------------------------------------------------------
 def scan_i2c_bus(bus_number=1):
     devices = []
     # I2Cバスを開く

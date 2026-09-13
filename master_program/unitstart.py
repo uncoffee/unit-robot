@@ -1,4 +1,4 @@
-from I2C import I2C_class ,scan_i2c_bus
+from master_program.i2c import I2C_class ,scan_i2c_bus
 import importlib
 import time
 
@@ -11,7 +11,7 @@ class setup:
     def create_instance(class_name:str, *args:any):
         try:
             # 1. 文字列からモジュールを動的にインポート
-            module = importlib.import_module("units")
+            module = importlib.import_module("master_program.units")
             
             # 2. モジュールから「文字列の指定に一致するクラス」を取得
             TargetClass = getattr(module, class_name)
@@ -25,7 +25,7 @@ class setup:
         except AttributeError:
             print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
 
-    def units_info() -> dict:
+    def setup(master_add) -> dict:
         # i2c機器を探す
         slave_adds = scan_i2c_bus(master_add)
         print(f"スレーブID{slave_adds}が見つかりました")
@@ -40,15 +40,3 @@ class setup:
             UniDic[slave_name] = setup.create_instance(slave_name,i2c_inst)
 
             return UniDic
-    
-master_add = 0x01
-if __name__ == "__main__":
-    units = setup.units_info()
-    print(units)
-    print(type(units["rover"]))
-    units["rover"].led(True)
-    time.sleep(5.0)
-    units["rover"].led(False)
-
-
-    units.stop()
