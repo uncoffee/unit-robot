@@ -1,7 +1,7 @@
 from master_program.unitstart import setup
 import time
 
-units = any
+units = any()
 
 def rover_test():
     print(units)

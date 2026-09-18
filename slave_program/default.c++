@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include "i2c.hpp"
+#include <avr/wdt.h>
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
@@ -7,7 +7,7 @@
 const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
 
 bool led = false;
-int time = 0; // 0->停止　100->100秒後停止
+int timer_count = 0; // 0->停止　100->100秒後停止
 
 unsigned long previousMillis = 0;
 
@@ -19,65 +19,76 @@ String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String cache = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
+bool reboot_flag = false; // rebootのフラグ
+
+int currentMillis = 0; // 定期実行の経過時間確認用
+
 
 // ここから下は自由にしてくれ。
-#define SLAVE_ADDRESS 0x10 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
+#define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
 const String job = "unit_name"; //ユニット固有の変数を宣言
+const int blank_time = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
 
-const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
 
 
+// オリジナルの処理を追加しよう。
+void addtasks(String receive) {
+  if (1) {
+    return;
+  }
+
+}
 
 //マスターからの命令に対応した動作 voidじゃないとだめ。
 void tasks(String receive) {
   if (receive == "result") {
     sendMsg = cache;
+    return;
   }
 
   if (receive == "num") {
     sendMsg = String(cache.length());
+    return;
   }
 
   if (receive == "who") {
     cache = job;
+    return;
   }
 
-  if (receive == "stop") { 
-    stop();
+  if (receive == "reboot") { 
+    reboot_flag = true;
+    return;
   }
 
   if (receive == "led_on") {
     led = true;
+    return;
   }
 
   if (receive == "led_off") {
     led = false;
+    return;
   }
 
   if (receive == "settime") {
     get_info = "time";
-  } else if (get_info == "time") {
-    time = receive.toInt() * 1000 / blank;
-    get_info = "";
+    return;
   }
-  //ここから下に追加する
+  if (get_info == "time") {
+    timer_count = receive.toInt() * 1000 / blank;
+    get_info = "";
+    return;
+  }
+  addtasks(receive);
 
 }
 
-//変数をすべて初期値にする
-void stop() {
-  // 既定の変数
-  isReady = false;
-  get_info = "";
-  inputBuffer = "";
-  receivedMessage = "";
-  sendMsg = "";
-  cache = "";
-  sendLength = "";
-  led = false;
-  time = 0;
-  previousMillis = 0;
-  // 追加された変数
+void reboot_def() {
+  if (reboot_flag) {
+    wdt_enable(WDTO_15MS);
+    while (1) {}
+  }
 }
 
 // 受信（割り込み処理）
@@ -117,7 +128,29 @@ void l_switch() {
     digitalWrite(LED_PIN, LOW); // LED消灯
   }
 }
+
+
+bool blank() {
+  if (millis() - currentMillis >= blank_time) {
+    currentMillis = millis();
+    return true
+  } else {
+    return false
+  }
+  
+}
+
+bool timer() {
+  if (timer_count <= 0) {
+    return false;
+  } else {
+    timer_count -= 1000 / blank;
+    return true;
+  }
+}
 //ここから固有の関数
+
+
 
 
 
@@ -140,6 +173,9 @@ void setup() {
   pinMode(MOTOR_BACK_L, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
 
+  // setupの最初でウォッチドッグを無効化（リセットループ防止）
+  wdt_disable();
+
   // 初期状態は停止
   moterstop();
 }
@@ -154,17 +190,11 @@ void loop() {
   }
 
   // 前回の実行から指定時間が経過したかチェック
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= blank) {
-    previousMillis = currentMillis;
+  if (blank()) {
     // ここに定期実行したい処理を書く
 
     l_switch();
 
     // 一定時間動き続ける制御の時に使う。
-    if (time > 0) {
-      time = time - 1; 
-    } else if (time < 1) {
-    }
-  }
+    if (timer()) {
 }
