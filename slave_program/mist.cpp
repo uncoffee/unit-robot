@@ -3,117 +3,77 @@
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
-// ピン配置の定義
-const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
-
+const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
 bool led = false;
-int time = 0; // 0->停止　100->100秒後停止
-
+int timer_count = 0; // 0->停止　100->100秒後停止
 unsigned long previousMillis = 0;
-
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
 String get_info = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
 String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
-String cache = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
+String send_text = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
-
 bool reboot_flag = false; // rebootのフラグ
-
 int currentMillis = 0; // 定期実行の経過時間確認用
 
 
 // ここから下は自由にしてくれ。
-#define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
-const String job = "rover"; //ユニット固有の変数を宣言
-const int blank = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
+#define SLAVE_ADDRESS 0x09 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
+const String job = "mist"; //ユニット固有の変数を宣言
+const int blank_MS = 10; //何ミリ毎秒ごとに実行するか
 
-// ピン配置の定義
-const int MOTOR_FRONT_R = 11; //前進のPIN1
-const int MOTOR_BACK_R = 12; //後退のPIN1
+const int SPLASH_PIN = 12; //前進のPIN1
 
-const int MOTOR_FRONT_L = 9; //前進のPIN2
-const int MOTOR_BACK_L = 10; //後退のPIN2
-
-// プログラムで使うグローバル変数
-bool right = true;
-bool left = true;
-bool motorflag = false;
-int speed = 100; // 0->停止　100->全速前進
-
+bool mist_flag = false; // プログラムで使うグローバル変数
 
 // オリジナルの処理を追加しよう。
-void addtasks(String receive) {
-  if (receive = "rf") {
-    right = true;
-    return;
-  }
-  if (receive = "lf") {
-    left = true;
-    return;
-  }
-  if (receive = "rb") {
-    right = false;
-    return;
-  }
-  if (receive = "lb") {
-    left = false;
-    return;
-  }
-
-  if (receive = "rf") {
+void add_receive(String task) {
+  if (1) {
     return;
   }
 
 }
 
 //マスターからの命令に対応した動作 voidじゃないとだめ。
-void tasks(String receive) {
-  if (receive == "result") {
-    sendMsg = cache;
+void defa_receive(String task) {
+  if (task == "result") {
+    sendMsg = send_text;
     return;
   }
-
-  if (receive == "num") {
-    sendMsg = String(cache.length());
+  if (task == "num") {
+    sendMsg = String(send_text.length());
     return;
   }
-
-  if (receive == "who") {
-    cache = job;
+  if (task == "who") {
+    send_text = job;
     return;
   }
-
-  if (receive == "reboot") { 
+  if (task == "reboot") { 
     reboot_flag = true;
     return;
   }
-
-  if (receive == "led_on") {
+  if (task == "led_on") {
     led = true;
     return;
   }
-
-  if (receive == "led_off") {
+  if (task == "led_off") {
     led = false;
     return;
   }
-
-  if (receive == "settime") {
+  if (task == "settime") {
     get_info = "time";
     return;
   }
   if (get_info == "time") {
-    time = receive.toInt() * 1000 / blank;
+    timer_count = task.toInt() * 1000 / blank;
     get_info = "";
     return;
   }
-  addtasks(receive);
-
+  add_receive(task);
 }
 
-void reboot_def() {
+void reboot() {
   if (reboot_flag) {
     wdt_enable(WDTO_15MS);
     while (1) {}
@@ -160,7 +120,7 @@ void l_switch() {
 
 
 bool blank() {
-  if (millis() - currentMillis >= blank_time) {
+  if (millis() - currentMillis >= blank_MS) {
     currentMillis = millis();
     return true
   } else {
@@ -168,13 +128,33 @@ bool blank() {
   }
   
 }
+
+bool timer() {
+  if (timer_count <= 0) {
+    return false;
+  } else {
+    timer_count -= 1000 / blank;
+    return true;
+  }
+}
+
+void runtask() {
+  if (isReady) {
+    String msg = getMessage();
+    defa_receive(msg);
+  }
+}
 //ここから固有の関数
-
-
-
-
+void mist_splash() {
+  if (mist_flag) {
+    digitalWrite(SPLASH_PIN, HIGH);
+  } else {
+    digitalWrite(SPLASH_PIN, LOW);
+  }
+}
 
 //ここまで
+
 void setup() {
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS);
@@ -187,10 +167,6 @@ void setup() {
   Serial.begin(9600);
 
   // ピンのモード設定
-  pinMode(MOTOR_FRONT_R, OUTPUT);
-  pinMode(MOTOR_BACK_R, OUTPUT);
-  pinMode(MOTOR_FRONT_L, OUTPUT);
-  pinMode(MOTOR_BACK_L, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
 
   // setupの最初でウォッチドッグを無効化（リセットループ防止）
@@ -198,27 +174,29 @@ void setup() {
 
   // 初期状態は停止
   moterstop();
+
+  // 以下追加セットアップ
+  pinMode(MOTOR_FRONT_R, OUTPUT);
+  pinMode(MOTOR_BACK_R, OUTPUT);
+  pinMode(MOTOR_FRONT_L, OUTPUT);
+  pinMode(MOTOR_BACK_L, OUTPUT);
+  
 }
 
 void loop() {
-  // 命令の受け取り
-  if (isReady) {
-  String msg = getMessage();
-  Serial.println("受信メッセージ: ");
-  Serial.println(msg);
-  decode_task(tasks ,msg);
-  }
-
   // 前回の実行から指定時間が経過したかチェック
+  runtask();
+
   if (blank()) {
     // ここに定期実行したい処理を書く
-
+    mist_splash();
+    reboot();
     l_switch();
 
     // 一定時間動き続ける制御の時に使う。
-    if (time > 0) {
-      time = time - 1; 
-    } else if (time < 1) {
+    if (timer()) {
+      mist_flag = true;
+    } else {
+      mist_flag = false;
     }
   }
-}

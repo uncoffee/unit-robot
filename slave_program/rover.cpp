@@ -25,18 +25,53 @@ int currentMillis = 0; // 定期実行の経過時間確認用
 
 // ここから下は自由にしてくれ。
 #define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
-const String job = "unit_name"; //ユニット固有の変数を宣言
-const int blank_MS = 100; //何ミリ毎秒ごとに実行するか
-int raw_temp = 0;
-int raw_pres = 0;
+const String job = "rover"; //ユニット固有の変数を宣言
+const int blank_MS = 10; //何ミリ毎秒ごとに実行するか
+
+// ピン配置の定義
+const int MOTOR_FRONT_R = 11; //前進のPIN1
+const int MOTOR_BACK_R = 12; //後退のPIN1
+
+const int MOTOR_FRONT_L = 9; //前進のPIN2
+const int MOTOR_BACK_L = 10; //後退のPIN2
+
+// プログラムで使うグローバル変数
+bool right = true;
+bool left = true;
+bool motor_flag = false;
+int speed = 100; // 0->停止　100->全速前進
+bool speed_flag = false;
 
 // オリジナルの処理を追加しよう。
 void add_receive(String task) {
-  if (task = "howtemp") {
-    send_text = 
+  if (task = "rf") {
+    right = true;
     return;
   }
-
+  if (task = "lf") {
+    left = true;
+    return;
+  }
+  if (task = "rb") {
+    right = false;
+    return;
+  }
+  if (task = "lb") {
+    left = false;
+    return;
+  }
+  if (task = "speed") {
+    speed_flag = true;
+    return;
+  }
+  if (speed_flag = true) {
+    speed = task;
+    return;
+  }
+  if (task = "howspeed") {
+    send_text = speed;
+    return;
+  }
 }
 
 //マスターからの命令に対応した動作 voidじゃないとだめ。
@@ -142,15 +177,45 @@ bool timer() {
   }
 }
 
-void RunTask() {
+void runtask() {
   if (isReady) {
     String msg = getMessage();
     defa_receive(msg);
+  }
 }
 //ここから固有の関数
 
+void motorStop() {
+  // 前進後退　出力を0にする
+  analogWrite(MOTOR_FRONT_R, 0); 
+  analogWrite(MOTOR_FRONT_L, 0);
+  analogWrite(MOTOR_BACK_R, 0);
+  analogWrite(MOTOR_BACK_L, 0);
+  digitalWrite(LED_PIN, LOW); // LED消灯
+}
 
+void rover_run() {
+  int duty = map(speed, 0, 100, 0, 255); // 0〜100% の値を Arduino の PWM 範囲（0〜255）に変換
 
+  if (moter_flag) {
+    motorStop();
+
+    if (right) {
+      analogWrite(MOTOR_FRONT_R, duty);
+    } else {
+      analogWrite(MOTOR_BACK_R, duty);
+    }
+
+    if (left) {
+      analogWrite(MOTOR_FRONT_L, duty);
+    } else {
+      analogWrite(MOTOR_BACK_L, duty);
+    }
+
+  } else {
+    motorStop();
+  }
+}
 
 
 //ここまで
@@ -176,16 +241,27 @@ void setup() {
   moterstop();
 
   // 以下追加セットアップ
-
+  pinMode(MOTOR_FRONT_R, OUTPUT);
+  pinMode(MOTOR_BACK_R, OUTPUT);
+  pinMode(MOTOR_FRONT_L, OUTPUT);
+  pinMode(MOTOR_BACK_L, OUTPUT);
+  
 }
 
 void loop() {
   // 前回の実行から指定時間が経過したかチェック
+  runtask();
+
   if (blank()) {
     // ここに定期実行したい処理を書く
     reboot();
     l_switch();
+    rover_run();
 
     // 一定時間動き続ける制御の時に使う。
     if (timer()) {
-}
+      speed_flag = true;
+    } else {
+      speed_flag = false;
+    }
+  }

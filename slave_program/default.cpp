@@ -3,8 +3,7 @@
 //環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
-// ピン配置の定義
-const int LED_PIN = 13; // Arduino Uno などの標準内蔵LED（ピン13）
+const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
 
 bool led = false;
 int timer_count = 0; // 0->停止　100->100秒後停止
@@ -16,7 +15,7 @@ String get_info = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
 String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
-String cache = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
+String send_text = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
 bool reboot_flag = false; // rebootのフラグ
@@ -27,12 +26,12 @@ int currentMillis = 0; // 定期実行の経過時間確認用
 // ここから下は自由にしてくれ。
 #define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
 const String job = "unit_name"; //ユニット固有の変数を宣言
-const int blank_time = 10; //一秒間に何回処理を繰り返すか。※1000以下の偶数の数字にして。割り切れない。
+const int blank_MS = 10; //何ミリ毎秒ごとに実行するか
 
 
 
 // オリジナルの処理を追加しよう。
-void addtasks(String receive) {
+void add_receive(String task) {
   if (1) {
     return;
   }
@@ -40,51 +39,44 @@ void addtasks(String receive) {
 }
 
 //マスターからの命令に対応した動作 voidじゃないとだめ。
-void tasks(String receive) {
-  if (receive == "result") {
-    sendMsg = cache;
+void defa_receive(String task) {
+  if (task == "result") {
+    sendMsg = send_text;
     return;
   }
-
-  if (receive == "num") {
-    sendMsg = String(cache.length());
+  if (task == "num") {
+    sendMsg = String(send_text.length());
     return;
   }
-
-  if (receive == "who") {
-    cache = job;
+  if (task == "who") {
+    send_text = job;
     return;
   }
-
-  if (receive == "reboot") { 
+  if (task == "reboot") { 
     reboot_flag = true;
     return;
   }
-
-  if (receive == "led_on") {
+  if (task == "led_on") {
     led = true;
     return;
   }
-
-  if (receive == "led_off") {
+  if (task == "led_off") {
     led = false;
     return;
   }
-
-  if (receive == "settime") {
+  if (task == "settime") {
     get_info = "time";
     return;
   }
   if (get_info == "time") {
-    timer_count = receive.toInt() * 1000 / blank;
+    timer_count = task.toInt() * 1000 / blank;
     get_info = "";
     return;
   }
-  addtasks(receive);
-
+  add_receive(task);
 }
 
-void reboot_def() {
+void reboot() {
   if (reboot_flag) {
     wdt_enable(WDTO_15MS);
     while (1) {}
@@ -131,7 +123,7 @@ void l_switch() {
 
 
 bool blank() {
-  if (millis() - currentMillis >= blank_time) {
+  if (millis() - currentMillis >= blank_MS) {
     currentMillis = millis();
     return true
   } else {
@@ -148,6 +140,12 @@ bool timer() {
     return true;
   }
 }
+
+void RunTask() {
+  if (isReady) {
+    String msg = getMessage();
+    defa_receive(msg);
+}
 //ここから固有の関数
 
 
@@ -155,6 +153,7 @@ bool timer() {
 
 
 //ここまで
+
 void setup() {
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS);
@@ -167,10 +166,6 @@ void setup() {
   Serial.begin(9600);
 
   // ピンのモード設定
-  pinMode(MOTOR_FRONT_R, OUTPUT);
-  pinMode(MOTOR_BACK_R, OUTPUT);
-  pinMode(MOTOR_FRONT_L, OUTPUT);
-  pinMode(MOTOR_BACK_L, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
 
   // setupの最初でウォッチドッグを無効化（リセットループ防止）
@@ -178,21 +173,16 @@ void setup() {
 
   // 初期状態は停止
   moterstop();
+
+  // 以下追加セットアップ
+
 }
 
 void loop() {
-  // 命令の受け取り
-  if (isReady) {
-  String msg = getMessage();
-  Serial.println("受信メッセージ: ");
-  Serial.println(msg);
-  decode_task(tasks ,msg);
-  }
-
   // 前回の実行から指定時間が経過したかチェック
   if (blank()) {
     // ここに定期実行したい処理を書く
-
+    reboot();
     l_switch();
 
     // 一定時間動き続ける制御の時に使う。
