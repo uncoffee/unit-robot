@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <avr/wdt.h>
-//環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
@@ -179,12 +178,13 @@ void setup() {
 }
 
 void loop() {
-  // 前回の実行から指定時間が経過したかチェック
+  runtask();
   if (blank()) {
     // ここに定期実行したい処理を書く
     reboot();
     l_switch();
 
     // 一定時間動き続ける制御の時に使う。
-    if (timer()) {
+    if (timer()) {}
+  }
 }

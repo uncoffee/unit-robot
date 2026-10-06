@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <avr/wdt.h>
-//環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
 
 // 変更禁止ゾーン
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
@@ -265,3 +264,4 @@ void loop() {
       speed_flag = false;
     }
   }
+}

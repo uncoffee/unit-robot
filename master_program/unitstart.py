@@ -1,4 +1,5 @@
 from master_program.i2c import I2C_class ,scan_i2c_bus
+from master_program.units import create_instance
 import importlib
 import time
 
@@ -8,23 +9,7 @@ class UnitsDict(dict):
             i.stop()
 
 class setup:
-    def create_instance(class_name:str, *args:any):
-        try:
-            # 1. 文字列からモジュールを動的にインポート
-            module = importlib.import_module("master_program.units")
-            
-            # 2. モジュールから「文字列の指定に一致するクラス」を取得
-            TargetClass = getattr(module, class_name)
-            
-            # 3. 取得したクラスをインスタンス化して返す
-            # (*args, **kwargs を渡すことで、引数があるコンストラクタにも対応)
-            print(*args)
-            instance = TargetClass(*args)
-            return instance
-        
-        except AttributeError:
-            print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
-
+    slave_ins_file = "master_program.units"
     def setup(master_add) -> dict:
         # i2c機器を探す
         slave_adds = scan_i2c_bus(master_add)
@@ -37,6 +22,6 @@ class setup:
             i2c_inst = I2C_class(int(slave_add,16))
             slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
             print(f"{slave_name}が接続されていることを確認しました")
-            UniDic[slave_name] = setup.create_instance(slave_name,i2c_inst)
+            UniDic[slave_name] = create_instance(slave_ins_file,slave_name,i2c_inst)
 
-            return UniDic
+        return UniDic

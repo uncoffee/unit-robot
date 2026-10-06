@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <avr/wdt.h>
-//環境はArduino IDEを想定しているためStringのincludeはしていない。ほかの環境を使ってやるときは自分で書き加えて。
+#include <Adafruit_BME280.h> // 温湿度センサー用。
 
 // 変更禁止ゾーン
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
@@ -27,13 +27,22 @@ int currentMillis = 0; // 定期実行の経過時間確認用
 #define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
 const String job = "unit_name"; //ユニット固有の変数を宣言
 const int blank_MS = 100; //何ミリ毎秒ごとに実行するか
-int raw_temp = 0;
-int raw_pres = 0;
+
+Adafruit_BMP280 bmp; // I2C接続
+int BMP_ID = 0x76 // 初期値として0x76に設定
+bool BMP = false; // 見つからなくても、中断しないように。
+float temp = 0.0; // ℃
+float pres = 0.0; // hPa
+
 
 // オリジナルの処理を追加しよう。
 void add_receive(String task) {
   if (task = "howtemp") {
-    send_text = 
+    send_text = String(temp);
+    return;
+  }
+  if (task = "howpres") {
+    send_text = String(pres);
     return;
   }
 
@@ -142,13 +151,32 @@ bool timer() {
   }
 }
 
-void RunTask() {
+void runtask() {
   if (isReady) {
     String msg = getMessage();
     defa_receive(msg);
+  }
 }
-//ここから固有の関数
 
+//ここから固有の関数
+bool BME_setup() {
+  if (bmp.begin(BMP_ID)) {
+    return true;
+  }
+  BMP_ID = 0x77
+
+  if (bmp.begin(BMP_ID)) {
+    return true;
+  }
+
+  Serial.println("温湿度センサーが見つかりません")
+  return false;
+}
+
+void BME_get() {
+  temp = bmp.readTemperature();
+  pres = bmp.readPressure() / 100.0F;
+}
 
 
 
@@ -176,16 +204,23 @@ void setup() {
   moterstop();
 
   // 以下追加セットアップ
-
+  BMP = BME_setup();
 }
 
 void loop() {
-  // 前回の実行から指定時間が経過したかチェック
+  runtask();
   if (blank()) {
     // ここに定期実行したい処理を書く
     reboot();
     l_switch();
 
+    if (!BME) {
+      BME = BME_setup();
+    } else {
+      BME_get();
+    }
+
     // 一定時間動き続ける制御の時に使う。
-    if (timer()) {
+    if (timer()) {}
+  }
 }
