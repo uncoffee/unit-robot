@@ -1,44 +1,47 @@
 #include <Wire.h>
 #include <avr/wdt.h>
 
-// 変更禁止ゾーン
+// 変更禁止ゾーン----------------------------------------------------
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
 
-bool led = false;
-int timer_count = 0; // 0->停止　100->100秒後停止
+bool led_flag = false; // ledのフラグ
+bool reboot_flag = false; // rebootのフラグ
 
-unsigned long previousMillis = 0;
+unsigned long nowtime = millis(); // 現在時刻(プログラム開始からMS毎で増加)
+unsigned long time_start = 0; // 稼働開始時間
+int time_goal = 0; // 稼働終了時間
 
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
-String get_info = ""; // 稼働時間を受け取るときは真になる
+String flag = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
-String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
+String receivedMessage = ""; // 最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String send_text = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
-bool reboot_flag = false; // rebootのフラグ
-
-int currentMillis = 0; // 定期実行の経過時間確認用
+// ----------------------------------------------------
 
 
-// ここから下は自由にしてくれ。
+// ここから下は自由にしてくれ----------------------------------------------------
+// 基本設定
 #define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
-const String job = "unit_name"; //ユニット固有の変数を宣言
-const int blank_MS = 10; //何ミリ毎秒ごとに実行するか
+const String job = "rover"; // ユニット固有の変数を宣言
+const int clock_blank = 20; // 何ミリ毎秒ごとに実行するか
+const bool test_mode = false; // テストモードか否か
 
-
+// ----------------------------------------------------
 
 // オリジナルの処理を追加しよう。
 void add_receive(String task) {
-  if (1) {
-    return;
-  }
-
+  return;
 }
 
-//マスターからの命令に対応した動作 voidじゃないとだめ。
+// マスターからの命令に対応した動作 voidじゃないとだめ。
 void defa_receive(String task) {
+  if (test_mode) {
+    Serial.println(task);
+  }
+
   if (task == "result") {
     sendMsg = send_text;
     return;
@@ -55,24 +58,30 @@ void defa_receive(String task) {
     reboot_flag = true;
     return;
   }
+
   if (task == "led_on") {
-    led = true;
+    led_flag = true;
     return;
   }
   if (task == "led_off") {
-    led = false;
+    led_flag = false;
     return;
   }
   if (task == "settime") {
-    get_info = "time";
+    flag = "time";
     return;
   }
-  if (get_info == "time") {
-    timer_count = task.toInt() * 1000 / blank;
-    get_info = "";
+  if (flag == "time") {
+    time_goal = task.toInt() * 1000; // MS単位で処理するため1000をかけてS単位にする
+    time_start = millis();
+    flag = "";
     return;
   }
   add_receive(task);
+
+  if (test_mode) {
+    Serial.println("taskが拾われなかった。");
+  }
 }
 
 void reboot() {
@@ -113,55 +122,50 @@ void requestEvent() {
 
 // 内蔵ledの制御
 void l_switch() {
-  if (led) {
+  if (led_flag) {
     digitalWrite(LED_PIN, HIGH); // LED消灯
   } else {
     digitalWrite(LED_PIN, LOW); // LED消灯
   }
 }
-
-
-bool blank() {
-  if (millis() - currentMillis >= blank_MS) {
-    currentMillis = millis();
-    return true
-  } else {
-    return false
-  }
-  
-}
-
-bool timer() {
-  if (timer_count <= 0) {
-    return false;
-  } else {
-    timer_count -= 1000 / blank;
+bool clock() {
+  if (nowtime % clock_blank == 0){
     return true;
+  } else {
+    return false;
   }
 }
 
-void RunTask() {
+bool time() {
+  if (nowtime - time_start > time_goal) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void runtask() {
   if (isReady) {
     String msg = getMessage();
     defa_receive(msg);
+  }
 }
-//ここから固有の関数
+// ここから固有の関数----------------------------------------
 
 
-
-
-
-//ここまで
+// ----------------------------------------
 
 void setup() {
-  Serial.begin(9600);
-  Wire.begin(SLAVE_ADDRESS);
-  Wire.onReceive(receiveEvent);
-  Wire.onRequest(requestEvent);
   Serial.print(job);
   Serial.println("_unit program start");
 
+  // I2Cの関数の指定
+  Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
+
+
   // シリアル通信の開始
+  Wire.begin(SLAVE_ADDRESS);
   Serial.begin(9600);
 
   // ピンのモード設定
@@ -170,21 +174,19 @@ void setup() {
   // setupの最初でウォッチドッグを無効化（リセットループ防止）
   wdt_disable();
 
-  // 初期状態は停止
-  moterstop();
-
-  // 以下追加セットアップ
-
+  // 以下追加セットアップ------------------------------
+  
 }
 
 void loop() {
+  nowtime = millis();
+  // 元からある関数
   runtask();
-  if (blank()) {
-    // ここに定期実行したい処理を書く
+  if (clock()) {
     reboot();
     l_switch();
 
-    // 一定時間動き続ける制御の時に使う。
-    if (timer()) {}
+    // 以下オリジナル関数
+
   }
 }

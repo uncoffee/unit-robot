@@ -1,21 +1,17 @@
-import importlib
+class UnitsDict(dict):
+    # すべての要素に関数を適用する共通メソッド geminiすげえ。俺はラムダ式を使えない。ムズイ
+    def apply_all(self, action) -> None:
+        for unit in self.values():
+            action(unit)
 
-def create_instance(file_name:str, object_name:str, *args:any):
-    try:
-        # 1. 文字列からモジュールを動的にインポート
-        module = importlib.import_module(file_name)
-        
-        # 2. モジュールから「文字列の指定に一致するクラス」を取得
-        TargetClass = getattr(module, object_name)
-        
-        # 3. 取得したクラスをインスタンス化して返す
-        # (*args, **kwargs を渡すことで、引数があるコンストラクタにも対応)
-        print(*args)
-        instance = TargetClass(*args)
-        return instance
-    
-    except AttributeError:
-        print(f"エラー: クラス '{object_name}' がモジュール内に見つかりません。")
+    def reboot(self) -> None:
+        self.apply_all(lambda unit: unit.reboot())
+
+    def stop(self) -> None:
+        self.apply_all(lambda unit: unit.st(0))
+
+    def led(self,switch:bool):
+        self.apply_all(lambda unit: unit.led(switch))
 
 """
 これを使いまわして増やしてくれ。
@@ -25,13 +21,12 @@ class UNIT_NAME(units):
         super().__init__(slave_instance)
 
 """
-
 class units:
     def __init__(self, slave_instance):
         self.ins = slave_instance #communication.pyのI2CCommunicatorのインスタンスを受け取る(通信用)
 
-    def stop(self) -> None:
-        self.ins.send("stop") #強制停止
+    def reboot(self) -> None:
+        self.ins.send("reboot") #強制停止
 
     def led(self,switch:bool) -> None:
         if (switch):
@@ -39,8 +34,11 @@ class units:
         else:
             self.ins.send("led_off")
 
-    def settime(self,time:int) -> None:
-        self.ins.send("time",time)
+    def stop(self):
+        self.st(0)
+
+    def st(self, time:int) -> None:
+        self.ins.send("settime",time)
 
 class rover(units):
     DIRECTION_GO  = {"right": "rf", "left": "lf"}
@@ -53,13 +51,15 @@ class rover(units):
         self.status:dict[str, str] = {} #一応unit側は両方前入力がデフォルトだけど、変更に備えて最初は定義しない。
 
     def _MotorOn(self,DIRECTION:dict[str, str],time:int) -> None:
+        # geminiすげえ。俺はヘルパー関数の存在を知らんかった。
         change = []
         for key in DIRECTION.keys():
             if self.status.get(key) != DIRECTION[key]:
                 self.status[key] = DIRECTION[key]
                 change.append(DIRECTION[key])
 
-        self.ins.send(*change,"time",time)
+        self.ins.send(*change)
+        self.st(time)
 
     def go(self,time:int) -> None:
         self._MotorOn(self.DIRECTION_GO,time)
@@ -84,7 +84,7 @@ class mist(units):
         super().__init__(slave_instance)
 
     def spray(self,time:int) -> None:
-        self.ins.send("time",time)
+        self.st(time)
 
 class sensor(units):
     def __init__(self,slave_instance):

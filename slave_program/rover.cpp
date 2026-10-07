@@ -1,43 +1,47 @@
 #include <Wire.h>
 #include <avr/wdt.h>
 
-// 変更禁止ゾーン
+// 変更禁止ゾーン----------------------------------------------------
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
 
-bool led = false;
-unsigned long timer_start = 0; // 稼働時間の操作用
-int timer_end = 0; // 稼働時間の操作用
+bool led_flag = false; // ledのフラグ
+bool reboot_flag = false; // rebootのフラグ
 
-
+unsigned long nowtime = millis(); // 現在時刻(プログラム開始からMS毎で増加)
+unsigned long time_start = 0; // 稼働開始時間
+int time_goal = 0; // 稼働終了時間
 
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
 String flag = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
-String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
+String receivedMessage = ""; // 最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String send_text = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
 
-bool reboot_flag = false; // rebootのフラグ
+// ----------------------------------------------------
 
 
-
-// ここから下は自由にしてくれ。
+// ここから下は自由にしてくれ----------------------------------------------------
+// 基本設定
 #define SLAVE_ADDRESS 0x08 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
-const String job = "rover"; //ユニット固有の変数を宣言
-const int blank_MS = 10; //何ミリ毎秒ごとに実行するか
+const String job = "rover"; // ユニット固有の変数を宣言
+const int clock_blank = 20; // 何ミリ毎秒ごとに実行するか
+const bool test_mode = false; // テストモードか否か
 
 // ピン配置の定義
-const int MOTOR_FRONT_R = 11; //前進のPIN1
-const int MOTOR_BACK_R = 12; //後退のPIN1
+const int MOTOR_FRONT_R = 11; // 前進のPIN1
+const int MOTOR_BACK_R = 12; // 後退のPIN1
 
-const int MOTOR_FRONT_L = 9; //前進のPIN2
-const int MOTOR_BACK_L = 10; //後退のPIN2
+const int MOTOR_FRONT_L = 9; // 前進のPIN2
+const int MOTOR_BACK_L = 10; // 後退のPIN2
 
 // プログラムで使うグローバル変数
 bool right = true;
 bool left = true;
 int speed = 100; // 0->停止　100->全速前進
+
+// ----------------------------------------------------
 
 // オリジナルの処理を追加しよう。
 void add_receive(String task) {
@@ -72,8 +76,12 @@ void add_receive(String task) {
   }
 }
 
-//マスターからの命令に対応した動作 voidじゃないとだめ。
+// マスターからの命令に対応した動作 voidじゃないとだめ。
 void defa_receive(String task) {
+  if (test_mode) {
+    Serial.println(task);
+  }
+
   if (task == "result") {
     sendMsg = send_text;
     return;
@@ -90,12 +98,13 @@ void defa_receive(String task) {
     reboot_flag = true;
     return;
   }
+
   if (task == "led_on") {
-    led = true;
+    led_flag = true;
     return;
   }
   if (task == "led_off") {
-    led = false;
+    led_flag = false;
     return;
   }
   if (task == "settime") {
@@ -103,12 +112,16 @@ void defa_receive(String task) {
     return;
   }
   if (flag == "time") {
-    timer_end = task.toInt() * 1000; //MS単位で処理するため1000をかけてS単位にする。
-    timer_start = millis();
+    time_goal = task.toInt() * 1000; // MS単位で処理するため1000をかけてS単位にする
+    time_start = millis();
     flag = "";
     return;
   }
   add_receive(task);
+
+  if (test_mode) {
+    Serial.println("taskが拾われなかった。");
+  }
 }
 
 void reboot() {
@@ -149,15 +162,22 @@ void requestEvent() {
 
 // 内蔵ledの制御
 void l_switch() {
-  if (led) {
+  if (led_flag) {
     digitalWrite(LED_PIN, HIGH); // LED消灯
   } else {
     digitalWrite(LED_PIN, LOW); // LED消灯
   }
 }
+bool clock() {
+  if (nowtime % clock_blank == 0){
+    return true;
+  } else {
+    return false;
+  }
+}
 
-bool timer() {
-  if (millis() - timer_start > timer_end) {
+bool time() {
+  if (nowtime - time_start > time_goal) {
     return true;
   } else {
     return false;
@@ -170,7 +190,7 @@ void runtask() {
     defa_receive(msg);
   }
 }
-//ここから固有の関数
+// ここから固有の関数----------------------------------------
 
 void motorstop() {
   // 前進後退　出力を0にする
@@ -182,12 +202,10 @@ void motorstop() {
 }
 
 void rover_run() {
-  if (timer()) {
+  if (time()) {
     motorstop();
     return;
   }
-
-  Serial.println("動いてるはず");
 
   int duty = map(speed, 0, 100, 0, 255); // 0〜100% の値を Arduino の PWM 範囲（0〜255）に変換
 
@@ -208,18 +226,19 @@ void rover_run() {
   }
 }
 
-
-//ここまで
+// ----------------------------------------
 
 void setup() {
-  Serial.begin(9600);
-  Wire.begin(SLAVE_ADDRESS);
-  Wire.onReceive(receiveEvent);
-  Wire.onRequest(requestEvent);
   Serial.print(job);
   Serial.println("_unit program start");
 
+  // I2Cの関数の指定
+  Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
+
+
   // シリアル通信の開始
+  Wire.begin(SLAVE_ADDRESS);
   Serial.begin(9600);
 
   // ピンのモード設定
@@ -228,10 +247,13 @@ void setup() {
   // setupの最初でウォッチドッグを無効化（リセットループ防止）
   wdt_disable();
 
+
+
+  // 以下追加セットアップ------------------------------
   // 初期状態は停止
   motorstop();
 
-  // 以下追加セットアップ
+  // pin設定
   pinMode(MOTOR_FRONT_R, OUTPUT);
   pinMode(MOTOR_BACK_R, OUTPUT);
   pinMode(MOTOR_FRONT_L, OUTPUT);
@@ -240,12 +262,15 @@ void setup() {
 }
 
 void loop() {
+  nowtime = millis();
   // 元からある関数
   runtask();
-  if ()
-  reboot();
-  l_switch();
+  if (clock()) {
+    reboot();
+    l_switch();
 
-  // 以下オリジナル関数
-  rover_run();
+    // 以下オリジナル関数
+    rover_run();
+
+  }
 }
