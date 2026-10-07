@@ -9,8 +9,10 @@ class UnitsDict(dict):
             i.stop()
 
 class setup:
-    slave_ins_file = "master_program.units"
     def setup(master_add) -> dict:
+        #ファイルの場所を設定。
+        slave_ins_file = "master_program.units"
+
         # i2c機器を探す
         slave_adds = scan_i2c_bus(master_add)
         print(f"スレーブID{slave_adds}が見つかりました")

@@ -1,7 +1,6 @@
 from master_program.unitstart import setup
 import time
 
-units = any()
 
 def rover_test():
     print(units)
@@ -20,14 +19,15 @@ def rover_test():
     time.sleep(8)
     units["rover"].set_speed(50)
     time.sleep(3)
-    print(units["rover"].get_speed())
-    time.sleep(3)
+    print(units["rover"].how_speed())
+    time.sleep(5)
     units.stop()
-    print(units["rover"].get_speed())
+    print(units["rover"].how_speed())
 
 
 #テストコード
 if __name__ == "__main__":
     master_add = 0x01
     units = setup.setup(master_add)
+    rover_test()
 

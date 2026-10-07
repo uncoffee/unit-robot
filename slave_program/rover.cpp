@@ -5,12 +5,13 @@
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
 
 bool led = false;
-int timer_count = 0; // 0->停止　100->100秒後停止
+unsigned long timer_start = 0; // 稼働時間の操作用
+int timer_end = 0; // 稼働時間の操作用
 
-unsigned long previousMillis = 0;
+
 
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
-String get_info = ""; // 稼働時間を受け取るときは真になる
+String flag = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
 String receivedMessage = ""; //最後に受け取ったメッセージを持っておくやつ
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
@@ -19,7 +20,6 @@ String sendLength = ""; // 送り返す文字の長さを保存しとく
 
 bool reboot_flag = false; // rebootのフラグ
 
-int currentMillis = 0; // 定期実行の経過時間確認用
 
 
 // ここから下は自由にしてくれ。
@@ -37,38 +37,37 @@ const int MOTOR_BACK_L = 10; //後退のPIN2
 // プログラムで使うグローバル変数
 bool right = true;
 bool left = true;
-bool motor_flag = false;
 int speed = 100; // 0->停止　100->全速前進
-bool speed_flag = false;
 
 // オリジナルの処理を追加しよう。
 void add_receive(String task) {
-  if (task = "rf") {
+  if (task == "rf") {
     right = true;
     return;
   }
-  if (task = "lf") {
+  if (task == "lf") {
     left = true;
     return;
   }
-  if (task = "rb") {
+  if (task == "rb") {
     right = false;
     return;
   }
-  if (task = "lb") {
+  if (task == "lb") {
     left = false;
     return;
   }
-  if (task = "speed") {
-    speed_flag = true;
+  if (task == "setspeed") {
+    flag = "setspeed";
     return;
   }
-  if (speed_flag = true) {
-    speed = task;
+  if (flag == "setspeed") {
+    speed = task.toInt();
+    flag = "";
     return;
   }
-  if (task = "howspeed") {
-    send_text = speed;
+  if (task == "howspeed") {
+    send_text = String(speed);
     return;
   }
 }
@@ -100,12 +99,13 @@ void defa_receive(String task) {
     return;
   }
   if (task == "settime") {
-    get_info = "time";
+    flag = "time";
     return;
   }
-  if (get_info == "time") {
-    timer_count = task.toInt() * 1000 / blank;
-    get_info = "";
+  if (flag == "time") {
+    timer_end = task.toInt() * 1000; //MS単位で処理するため1000をかけてS単位にする。
+    timer_start = millis();
+    flag = "";
     return;
   }
   add_receive(task);
@@ -156,23 +156,11 @@ void l_switch() {
   }
 }
 
-
-bool blank() {
-  if (millis() - currentMillis >= blank_MS) {
-    currentMillis = millis();
-    return true
-  } else {
-    return false
-  }
-  
-}
-
 bool timer() {
-  if (timer_count <= 0) {
-    return false;
-  } else {
-    timer_count -= 1000 / blank;
+  if (millis() - timer_start > timer_end) {
     return true;
+  } else {
+    return false;
   }
 }
 
@@ -184,7 +172,7 @@ void runtask() {
 }
 //ここから固有の関数
 
-void motorStop() {
+void motorstop() {
   // 前進後退　出力を0にする
   analogWrite(MOTOR_FRONT_R, 0); 
   analogWrite(MOTOR_FRONT_L, 0);
@@ -194,25 +182,29 @@ void motorStop() {
 }
 
 void rover_run() {
+  if (timer()) {
+    motorstop();
+    return;
+  }
+
+  Serial.println("動いてるはず");
+
   int duty = map(speed, 0, 100, 0, 255); // 0〜100% の値を Arduino の PWM 範囲（0〜255）に変換
 
-  if (moter_flag) {
-    motorStop();
-
-    if (right) {
-      analogWrite(MOTOR_FRONT_R, duty);
-    } else {
-      analogWrite(MOTOR_BACK_R, duty);
-    }
-
-    if (left) {
-      analogWrite(MOTOR_FRONT_L, duty);
-    } else {
-      analogWrite(MOTOR_BACK_L, duty);
-    }
-
+  if (right) {
+    analogWrite(MOTOR_FRONT_R, duty);
+    analogWrite(MOTOR_BACK_R, 0);
   } else {
-    motorStop();
+    analogWrite(MOTOR_BACK_R, duty);
+    analogWrite(MOTOR_FRONT_R, 0);
+  }
+
+  if (left) {
+    analogWrite(MOTOR_FRONT_L, duty);
+    analogWrite(MOTOR_BACK_L, 0);
+  } else {
+    analogWrite(MOTOR_BACK_L, duty);
+    analogWrite(MOTOR_FRONT_L, 0);
   }
 }
 
@@ -237,7 +229,7 @@ void setup() {
   wdt_disable();
 
   // 初期状態は停止
-  moterstop();
+  motorstop();
 
   // 以下追加セットアップ
   pinMode(MOTOR_FRONT_R, OUTPUT);
@@ -248,20 +240,12 @@ void setup() {
 }
 
 void loop() {
-  // 前回の実行から指定時間が経過したかチェック
+  // 元からある関数
   runtask();
+  if ()
+  reboot();
+  l_switch();
 
-  if (blank()) {
-    // ここに定期実行したい処理を書く
-    reboot();
-    l_switch();
-    rover_run();
-
-    // 一定時間動き続ける制御の時に使う。
-    if (timer()) {
-      speed_flag = true;
-    } else {
-      speed_flag = false;
-    }
-  }
+  // 以下オリジナル関数
+  rover_run();
 }

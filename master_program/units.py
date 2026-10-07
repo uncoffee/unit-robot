@@ -1,10 +1,12 @@
+import importlib
+
 def create_instance(file_name:str, object_name:str, *args:any):
     try:
         # 1. 文字列からモジュールを動的にインポート
         module = importlib.import_module(file_name)
         
         # 2. モジュールから「文字列の指定に一致するクラス」を取得
-        TargetClass = getattr(module, class_name)
+        TargetClass = getattr(module, object_name)
         
         # 3. 取得したクラスをインスタンス化して返す
         # (*args, **kwargs を渡すことで、引数があるコンストラクタにも対応)
@@ -13,7 +15,7 @@ def create_instance(file_name:str, object_name:str, *args:any):
         return instance
     
     except AttributeError:
-        print(f"エラー: クラス '{class_name}' がモジュール内に見つかりません。")
+        print(f"エラー: クラス '{object_name}' がモジュール内に見つかりません。")
 
 """
 これを使いまわして増やしてくれ。
@@ -48,33 +50,33 @@ class rover(units):
 
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
-        self.result_s:dict[str,str] = {} #一応unit側は両方前入力がデフォルトだけど、変更に備えて最初は定義しない。
+        self.status:dict[str, str] = {} #一応unit側は両方前入力がデフォルトだけど、変更に備えて最初は定義しない。
 
-    def _MotorOn(self,DIRECTION:dict[str:str],time:int) -> None:
+    def _MotorOn(self,DIRECTION:dict[str, str],time:int) -> None:
         change = []
         for key in DIRECTION.keys():
-            if self.status[key] != self.result_s[key]:
-                self.result_s[key] = self.status[key]
-                change.append(self.status[key])
+            if self.status.get(key) != DIRECTION[key]:
+                self.status[key] = DIRECTION[key]
+                change.append(DIRECTION[key])
 
-        self.ins.send(*change,"time",time,"run")
+        self.ins.send(*change,"time",time)
 
     def go(self,time:int) -> None:
-        self._MotorOn(DIRECTION_GO,time)
+        self._MotorOn(self.DIRECTION_GO,time)
 
     def back(self,time:int) -> None:
-        self._MotorOn(DIRECTION_BACK,time)
+        self._MotorOn(self.DIRECTION_BACK,time)
 
     def right(self,time:int) -> None:
-        self._MotorOn(DIRECTION_RIGHT,time)
+        self._MotorOn(self.DIRECTION_RIGHT,time)
 
     def left(self,time:int) -> None:
-        self._MotorOn(DIRECTION_LEFT,time)
+        self._MotorOn(self.DIRECTION_LEFT,time)
 
-    def setspeed(self,speed:int) -> None:
-        self.ins.send("speed",speed)
+    def set_speed(self,speed:int) -> None:
+        self.ins.send("setspeed",speed)
 
-    def howspeed(self) -> int:
+    def how_speed(self) -> int:
         return int(self.ins.ask("howspeed"))
 
 class mist(units):

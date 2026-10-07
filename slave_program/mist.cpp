@@ -3,9 +3,12 @@
 
 // 変更禁止ゾーン
 const int LED_PIN = 13; // Arduino Nano などの標準内蔵LED（ピン13）
+
 bool led = false;
 int timer_count = 0; // 0->停止　100->100秒後停止
+
 unsigned long previousMillis = 0;
+
 volatile bool isReady = false; // マスターから命令が来ていたら真になる
 String get_info = ""; // 稼働時間を受け取るときは真になる
 String inputBuffer = ""; // 受け取ったメッセをまとめてぶち込む
@@ -13,9 +16,10 @@ String receivedMessage = ""; //最後に受け取ったメッセージを持っ�
 String sendMsg = ""; // readが来たら送り返す文字を入れとくやつ
 String send_text = ""; // 文字数を先に伝えるから、その間は返答を持っておくやつ
 String sendLength = ""; // 送り返す文字の長さを保存しとく
-bool reboot_flag = false; // rebootのフラグ
-int currentMillis = 0; // 定期実行の経過時間確認用
 
+bool reboot_flag = false; // rebootのフラグ
+
+int time_cache = 0; // 稼働時間の操作用
 
 // ここから下は自由にしてくれ。
 #define SLAVE_ADDRESS 0x09 // 0x08から0x77まで(わかってると思うけど。16進数だよ？)
@@ -65,7 +69,7 @@ void defa_receive(String task) {
     return;
   }
   if (get_info == "time") {
-    timer_count = task.toInt() * 1000 / blank;
+    timer_count = task.toInt();
     get_info = "";
     return;
   }
@@ -117,24 +121,14 @@ void l_switch() {
   }
 }
 
-
-bool blank() {
-  if (millis() - currentMillis >= blank_MS) {
-    currentMillis = millis();
-    return true
-  } else {
-    return false
-  }
-  
-}
-
 bool timer() {
   if (timer_count <= 0) {
     return false;
-  } else {
-    timer_count -= 1000 / blank;
-    return true;
   }
+
+  timer_count -= millis() - time_cache;
+  time_cache = millis();
+  return true;
 }
 
 void runtask() {
@@ -143,9 +137,10 @@ void runtask() {
     defa_receive(msg);
   }
 }
+
 //ここから固有の関数
 void mist_splash() {
-  if (mist_flag) {
+  if (timer()) {
     digitalWrite(SPLASH_PIN, HIGH);
   } else {
     digitalWrite(SPLASH_PIN, LOW);
@@ -183,20 +178,11 @@ void setup() {
 }
 
 void loop() {
-  // 前回の実行から指定時間が経過したかチェック
+  // 元からある関数
   runtask();
+  reboot();
+  l_switch();
 
-  if (blank()) {
-    // ここに定期実行したい処理を書く
-    mist_splash();
-    reboot();
-    l_switch();
-
-    // 一定時間動き続ける制御の時に使う。
-    if (timer()) {
-      mist_flag = true;
-    } else {
-      mist_flag = false;
-    }
-  }
+  // 以下オリジナル関数
+  mist_splash();
 }

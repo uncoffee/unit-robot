@@ -2,6 +2,8 @@
 ## master_program
 * i2c.py（ライブラリはsmbus2を使った。通信形式を書いた。）
 * units.py（様々なユニットに対応したclassがあるよ。）
+    ### 不具合情報
+    * set_speedがうまくいかない。へへっ
 * unitstart.py（プログラムの最初に呼び出すべき関数を記述。）
 
 ## slave_program
