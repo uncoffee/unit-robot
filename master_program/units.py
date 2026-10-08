@@ -96,3 +96,10 @@ class sensor(units):
     def howpres() -> float:
         return float(self.ins.ask("howpres"))
 
+class tracking_sys:
+    def __init__(self, rover_ins):
+        self.rover_ins = rover_ins
+
+    def tracking(self, tracking_info:dict[str, int | list[int]])):
+        pass
+        
