@@ -1,5 +1,4 @@
 class UnitsDict(dict):
-    # すべての要素に関数を適用する共通メソッド geminiすげえ。俺はラムダ式を使えない。ムズイ
     def apply_all(self, action) -> None:
         for unit in self.values():
             action(unit)
@@ -23,22 +22,16 @@ class UNIT_NAME(units):
 """
 class units:
     def __init__(self, slave_instance):
-        self.ins = slave_instance #communication.pyのI2CCommunicatorのインスタンスを受け取る(通信用)
+        self.ins = slave_instance
 
     def reboot(self) -> None:
-        self.ins.send("reboot") #強制停止
+        self.ins.send(0) #強制停止
 
     def led(self,switch:bool) -> None:
         if (switch):
-            self.ins.send("led_on")
+            self.ins.send(1,1)
         else:
-            self.ins.send("led_off")
-
-    def stop(self):
-        self.st(0)
-
-    def st(self, time:int) -> None:
-        self.ins.send("settime",time)
+            self.ins.send(1,0)
 
 class rover(units):
     DIRECTION_GO  = {"right": "rf", "left": "lf"}
@@ -48,10 +41,9 @@ class rover(units):
 
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
-        self.status:dict[str, str] = {} #一応unit側は両方前入力がデフォルトだけど、変更に備えて最初は定義しない。
+        self.status:dict[str, str] = {}
 
     def _MotorOn(self,DIRECTION:dict[str, str],time:int) -> None:
-        # geminiすげえ。俺はヘルパー関数の存在を知らんかった。
         change = []
         for key in DIRECTION.keys():
             if self.status.get(key) != DIRECTION[key]:
@@ -100,6 +92,6 @@ class tracking_sys:
     def __init__(self, rover_ins):
         self.rover_ins = rover_ins
 
-    def tracking(self, tracking_info:dict[str, int | list[int]])):
+    def tracking(self, tracking_info:dict[str, int | list[int]]):
         pass
         

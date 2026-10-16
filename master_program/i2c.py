@@ -5,46 +5,40 @@ from master_program.tool_box import custom_print
 
 
 class I2C_class:
+    sleep = 0.1
+    read_byte = 8
+
     def __init__(self, slave_id:int | None=None, bus_number:int=1, pri_bool:bool=False):
         self.slave_id = slave_id
         self.bus_number = bus_number
         self.pri = custom_print(pri_bool)
-        self.timesleep = 0.1
 
-    def send(self, *args:str | int | float):
+    def send(self, *args:int):
         for raw_text in args:
-            time.sleep(self.timesleep)
-            send_text = str(raw_text) + "?" # スレイブ側で文字の文末を理解するために「?」をつける
-            data_bytes = list(send_text.encode('utf-8'))
+            time.sleep(I2C_class.sleep)
             try:
                 with SMBus(self.bus_number) as bus:
                     # self.slave_id を使用して書き込みメッセージを作成
-                    write_msg = i2c_msg.write(self.slave_id, data_bytes)
+                    write_msg = i2c_msg.write(self.slave_id, raw_text)
                     bus.i2c_rdwr(write_msg)
                     
-                self.pri.p(f"[Success] Sent to {hex(self.slave_id)}: '{send_text}'")
+                self.pri.p(f"[Success] Sent to {hex(self.slave_id)}: '{raw_text}'")
             except Exception as e:
                 self.pri.p(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
 
-    def read(self, num):
-        time.sleep(self.timesleep)
-        """
-        インスタンスに設定された self.slave_id から指定したバイト数分のデータを受信する
-        :param num: 受信するバイト数
-        :return: 受信した文字列（デコード失敗時は生バイトデータ、エラー時はNone）
-        """
+    def read(self):
+        time.sleep(I2C_class.sleep)
         try:
             with SMBus(self.bus_number) as bus:
-                # self.slave_id を使用して読み込みメッセージを作成
-                read_msg = i2c_msg.read(self.slave_id, num)
+                # 指定バイト数（デフォルト32）だけ一気に読み込む
+                read_msg = i2c_msg.read(self.slave_id, I2C_class.read_byte)
                 bus.i2c_rdwr(read_msg)
                 
-                # 受信データをリストに変換
                 data_received = list(read_msg)
                 
-                # バイト列を文字列にデコードする
                 try:
-                    decoded_text = bytes(data_received).decode('utf-8').rstrip('\x00')
+                    # 最初の \0 (ヌル文字) より前の有効な文字列だけを取り出す
+                    decoded_text = bytes(data_received).decode('utf-8').split('\x00')[0]
                     return decoded_text
                 except UnicodeDecodeError:
                     return data_received
@@ -52,33 +46,13 @@ class I2C_class:
         except Exception as e:
             self.pri.p(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
             return None
-        
+               
     def ask(self, question: str | int) -> str | int:
         self.send(question)
-        self.send("num")
-        a = self.read(1)
-        num = int(a) #1桁指定されてから受け取る
         self.send("result")
-        result = str(self.read(num)) #c++のほうが上手くいけば多分大丈夫
+        result = str(self.read()) #c++のほうが上手くいけば多分大丈夫
             
         return result
-        
-# --- 使い方（インスタンス化と実行）の例 ---
-if __name__ == "__main__":
-    # スレイブアドレス 0x08 用のインスタンスを作成
-    device = I2C_class(slave_id=0x10)
-    
-    # 1. 送信 (send)
-    # 引数に slave_id を渡す必要がなくなり、スッキリします
-    device.send("Hello!")
-    
-    time.sleep(0.1)
-    
-    # 2. 受信 (read)
-    # こちらもバイト数を指定するだけで、設定された slave_id から読み込みます
-    print("read from slave...")
-    data = device.read(3)
-    print(f"Received: {data}")
 
 def scan_i2c_bus(bus_number=1):
     devices = []
@@ -95,14 +69,4 @@ def scan_i2c_bus(bus_number=1):
                 # 応答がない（機器が繋がっていない）場合はエラーになるのでスルー
                 pass
     return devices
-
-# スキャンを実行して結果を表示
-if __name__ == "__main__":
-    print("I2Cスキャンを開始します...")
-    connected_devices = scan_i2c_bus(1)#masterのスレーブアドレスを引数に入れる
-    
-    if connected_devices:
-        print(f"検出されたデバイスのアドレス: {connected_devices}")
-    else:
-        print("デバイスは見つかりませんでした。")
 

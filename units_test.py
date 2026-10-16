@@ -49,5 +49,5 @@ if __name__ == "__main__":
     test_mode = True
     units = setup.setup(master_add, test_mode)
     global_test()
-    mist_test()
+    
 
