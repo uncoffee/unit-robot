@@ -1,25 +1,32 @@
 from master_program.i2c import I2C_class, scan_i2c_bus
-from master_program.tool_box import create_instance, custom_print
+from master_program.tool_box import create_instance, custom_print, id_to_name
 from master_program.units import UnitsDict
 
 
 class setup:
-    def setup(master_add:int=1, cus_pri:bool=False) -> dict:
-        pri = custom_print(cus_pri)
+    def __init__(self, master_add:int=1, test:bool=False):
+        self.master_add = master_add
+        self.print = custom_print(test).p
+
+    def setup(self) -> dict:
         #ファイルの場所を設定。
         slave_ins_file = "master_program.units"
 
         # i2c機器を探す
-        slave_adds = scan_i2c_bus(master_add)
-        pri.p(f"スレーブID{slave_adds}が見つかりました")
+        slave_adds = scan_i2c_bus(self.master_add)
+        self.print(f"スレーブID{slave_adds}が見つかりました")
 
         UniDic = UnitsDict()
 
         for slave_add in slave_adds:
             # i2c通信用のクラスからインスタンスを作成
-            i2c_inst = I2C_class(int(slave_add,16), 1, cus_pri)
-            slave_name = i2c_inst.ask("who")# そのスレーブが何なのか確認する
-            pri.p(f"{slave_name}が接続されていることを確認しました")
+            i2c_inst = I2C_class(int(slave_add,16), self.print)
+
+            # そのスレーブが何なのか確認する
+            slave_id = i2c_inst.ask(0)
+            print(slave_id)
+            slave_name = id_to_name(slave_id[0])
+            self.print(f"{slave_name}が接続されていることを確認しました")
             UniDic[slave_name] = create_instance(slave_ins_file,slave_name,i2c_inst)
 
         return UniDic

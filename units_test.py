@@ -1,4 +1,5 @@
 from master_program.unitstart import setup
+from master_program.unitstart import I2C_class
 import time
 
 def global_test():
@@ -6,7 +7,6 @@ def global_test():
     time.sleep(3)
     units.led(False)
     time.sleep(3)
-    units.stop()
     units.led(True)
     units.reboot()
 
@@ -47,7 +47,8 @@ def mist_test():
 if __name__ == "__main__":
     master_add = 0x01
     test_mode = True
-    units = setup.setup(master_add, test_mode)
+    setuper = setup(master_add, test_mode)
+    units = setuper.setup()
     global_test()
     
 

@@ -5,48 +5,40 @@
 #include <Wire.h>
 #include <avr/wdt.h>
 
-// i2c 関連の変数
-extern uint8_t fir_byte;
-extern uint8_t sec_byte;
-extern bool i2c_flag;
-extern String result;
 
-// 受信・送信イベントのプロトタイプ宣言
-void receiveEvent(int howMany);
-void requestEvent();
-
-class tasks {
+class task {
 private:
     void (*func)(uint8_t);
-    const char* name = "";
-
-    static constexpr uint8_t MAX_TASKS = 10;
-    static tasks* inst_list[MAX_TASKS];
-    static uint8_t inst_count;
+    const char* name;
+    static constexpr int8_t MAX_TASK = 10;
+    static task* inst_list[MAX_TASK];
+    static uint8_t _count;
 
 public:
-    tasks(const char* name, void (*func)(uint8_t)) : name(name), func(func) {
-        if (inst_count < MAX_TASKS) {
-            inst_list[inst_count] = this;
-            inst_count++;
+    task(const char* name, void (*func)(uint8_t)) : name(name), func(func) {
+        if (_count < MAX_TASK) {
+            inst_list[_count] = this;
+            _count++;
         }
     }
 
-    static void search(uint8_t order, uint8_t change) {
-        if (order < inst_count && inst_list[order] != nullptr) {
-            inst_list[order]->func(change);
+    static void search(uint8_t job_num, uint8_t value) {
+        if (job_num < _count && inst_list[job_num] != nullptr) {
+            inst_list[job_num]->func(value);
         }
     }
 
     static void show() {
         Serial.println("オーダー番号|役割");
-        for (uint8_t i = 0; i < inst_count; i++) {
+        for (uint8_t i = 0; i < _count; i++) {
             Serial.print(i);
             Serial.print("番\t");
             Serial.println(inst_list[i]->name);
         }
     }
 };
+uint8_t task::_count = 0;
+static task* task::inst_list[task::MAX_TASK];
 
 class timer {
 private:
@@ -54,16 +46,16 @@ private:
     uint32_t start = 0;
 
 public:
-    static uint32_t millis; // クラス内での初期化(=0)を削除
+    static uint32_t mil;
 
     timer(uint16_t goal) {
         this->goal = goal;
-        this->start = millis;
+        this->start = mil;
     }
 
     bool check() {
-        if (millis - this->start >= this->goal) {
-            this->start = millis;
+        if (mil - this->start >= this->goal) {
+            this->start = mil;
             return true;
         } else {
             return false;
@@ -72,41 +64,100 @@ public:
     
     void restart(uint16_t goal) {
         this->goal = goal;
-        this->start = millis;
+        this->start = mil;
+    }
+};
+uint32_t timer::mil = 0;
+
+
+class i2c {
+private:
+    static uint8_t job_id;
+    static uint8_t set_value;
+
+    static uint8_t fir_byte;
+    static uint8_t sec_byte;
+    
+public:
+    static bool i2c_flag;
+    
+    // 受信処理
+    static void receiveEvent(int howMany) {
+        job_id = Wire.read();
+        
+        if (howMany > 1) {
+            set_value = Wire.read();
+        } else {
+            set_value = 0;
+        }
+
+        while (Wire.available()) {
+            char _ = Wire.read();
+        }
+        i2c_flag = true;
+    }
+
+    // 送信処理
+    static void requestEvent() {
+        Wire.write(fir_byte);
+        Wire.write(sec_byte);
+        fir_byte = 0;
+        sec_byte = 0;
+    }
+
+    static void result_set(uint8_t first, uint8_t second=0) {
+        fir_byte = first;
+        sec_byte = second;
+    }
+
+    static void run_program() {
+        if(i2c_flag) {
+            task::search(job_id, set_value);
+            i2c_flag = false;
+        }
     }
 };
 
+uint8_t i2c::job_id = 0;
+uint8_t i2c::set_value = 0;
+uint8_t i2c::fir_byte = 0;
+uint8_t i2c::sec_byte = 0;
+bool i2c::i2c_flag = false;
+
+
 class unit {
 private:
-    unit() = delete;
-    static const char* unit_name;          // 変数名を unit_name に統一
+    static uint8_t unit_name;
     static uint8_t slave_address;
+    unit() = delete;
 
 public:
-    static constexpr uint8_t LED_PIN = 13; // constexprに変更してクラス内初期化を許可
+    static constexpr uint8_t LED_PIN = 13;
 
-
-    static void info(const char* name, uint8_t address) {
+    static void info(uint8_t name, uint8_t address) {
         unit_name = name;
         slave_address = address;
-
     }
 
     static void setup() {
-        Wire.onReceive(receiveEvent);
-        Wire.onRequest(requestEvent);
-
+        Wire.onReceive(i2c::receiveEvent);
+        Wire.onRequest(i2c::requestEvent);
         Wire.begin(slave_address); // 小文字の slave_address を使用
         Serial.begin(9600);
+        
         MCUSR = 0;
         wdt_disable();
         pinMode(LED_PIN, OUTPUT);
-        new tasks("rebootします", reboot);
-        new tasks("13pinのライト", led);
-        new tasks("自分の役職を発表", name);
+        new task("自分の役職を発表", name);
+        new task("rebootします", reboot);
+        new task("13pinのライト", led);
     }
+  
+    static void name(uint8_t _ = 0) {
+        i2c::result_set(unit_name);
+    } 
 
-    static void reboot(uint8_t _ = 0) {
+    static const void reboot(uint8_t _ = 0) {
         wdt_enable(WDTO_15MS);
         while (1) {}
     }
@@ -114,10 +165,11 @@ public:
     static void led(uint8_t flag) {
         digitalWrite(LED_PIN, flag);
     }
-
-    static void name(uint8_t _ = 0) {
-        result = unit_name;
-    } 
 };
+
+uint8_t unit::unit_name = 0;
+uint8_t unit::slave_address = 0;
+
+
 
 #endif

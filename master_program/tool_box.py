@@ -24,3 +24,11 @@ def create_instance(file_name:str, object_name:str, *args:any):
     
     except AttributeError:
         print(f"エラー: クラス '{object_name}' がモジュール内に見つかりません。")
+
+def id_to_name(num):
+    units_dict = {
+        1:"rover",
+        2:"mist"
+    }
+    unit_name = units_dict.get(num)
+    return unit_name

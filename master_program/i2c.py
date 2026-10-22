@@ -1,65 +1,56 @@
-from smbus2 import SMBus, i2c_msg
+from smbus2 import SMBus
 import time
-
-from master_program.tool_box import custom_print
-
 
 class I2C_class:
     sleep = 0.1
-    read_byte = 8
+    read_byte = 2
+    master_id = 1
 
-    def __init__(self, slave_id:int | None=None, bus_number:int=1, pri_bool:bool=False):
+    def __init__(self, slave_id:int | None=None, print:any=print):
         self.slave_id = slave_id
-        self.bus_number = bus_number
-        self.pri = custom_print(pri_bool)
+        self.print = print
 
-    def send(self, *args:int):
-        for raw_text in args:
-            time.sleep(I2C_class.sleep)
-            try:
-                with SMBus(self.bus_number) as bus:
-                    # self.slave_id を使用して書き込みメッセージを作成
-                    write_msg = i2c_msg.write(self.slave_id, raw_text)
-                    bus.i2c_rdwr(write_msg)
-                    
-                self.pri.p(f"[Success] Sent to {hex(self.slave_id)}: '{raw_text}'")
-            except Exception as e:
-                self.pri.p(f"[Error] Failed to send to {hex(self.slave_id)}: {e}")
-
-    def read(self):
+    def send(self, fir_byte:int, sec_byte:int=0):
         time.sleep(I2C_class.sleep)
+        print(f"{fir_byte}, {sec_byte}")
         try:
-            with SMBus(self.bus_number) as bus:
-                # 指定バイト数（デフォルト32）だけ一気に読み込む
-                read_msg = i2c_msg.read(self.slave_id, I2C_class.read_byte)
-                bus.i2c_rdwr(read_msg)
+
+
+            if fir_byte > 0xff and sec_byte > 0xff:
+                raise ValueError("引数一つ目もしくは二つ目の値は0x00~0xff以内である必要があります")
+            
+            with SMBus(I2C_class.master_id) as bus:
+                bus.write_byte_data(self.slave_id, fir_byte, sec_byte)
                 
-                data_received = list(read_msg)
-                
-                try:
-                    # 最初の \0 (ヌル文字) より前の有効な文字列だけを取り出す
-                    decoded_text = bytes(data_received).decode('utf-8').split('\x00')[0]
-                    return decoded_text
-                except UnicodeDecodeError:
-                    return data_received
+            self.print(f"[Success] Sent to {self.slave_id}: '{fir_byte}', '{sec_byte}'")
+        except Exception as e:
+            self.print(f"[Error] Failed to send to {self.slave_id}: {e}")
+
+    def read(self) -> list:
+        time.sleep(I2C_class.sleep)
+        read_list = []
+        try:
+            with SMBus(I2C_class.master_id) as bus:
+                for _ in range(I2C_class.read_byte):
+                    read_msg = int(bus.read_byte(self.slave_id))
+                    read_list.append(read_msg)
+
+            return read_list
                     
         except Exception as e:
-            self.pri.p(f"[Error] Failed to read from {hex(self.slave_id)}: {e}")
+            self.print(f"[Error] Failed to read from {self.slave_id}: {e}")
             return None
                
-    def ask(self, question: str | int) -> str | int:
-        self.send(question)
-        self.send("result")
-        result = str(self.read()) #c++のほうが上手くいけば多分大丈夫
-            
-        return result
+    def ask(self, fir_byte:int, sec_byte:int=0x00) -> list:
+        self.send(fir_byte, sec_byte)
+        return self.read()
 
 def scan_i2c_bus(bus_number=1):
     devices = []
     # I2Cバスを開く
     with SMBus(bus_number) as bus:
         # i2cdetectコマンドと同じ範囲（0x03 〜 0x77）をスキャン
-        for address in range(0x03, 0x78):
+        for address in range(0x03, 0x77):
             try:
                 # 空のデータを書き込んで応答があるか確認
                 bus.write_quick(address)

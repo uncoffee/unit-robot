@@ -6,26 +6,21 @@ class UnitsDict(dict):
     def reboot(self) -> None:
         self.apply_all(lambda unit: unit.reboot())
 
-    def stop(self) -> None:
-        self.apply_all(lambda unit: unit.st(0))
-
     def led(self,switch:bool):
         self.apply_all(lambda unit: unit.led(switch))
 
 """
 これを使いまわして増やしてくれ。
-
 class UNIT_NAME(units):
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
-
 """
 class units:
     def __init__(self, slave_instance):
         self.ins = slave_instance
 
     def reboot(self) -> None:
-        self.ins.send(0) #強制停止
+        self.ins.send(2) #強制停止
 
     def led(self,switch:bool) -> None:
         if (switch):
@@ -82,16 +77,10 @@ class sensor(units):
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
     
-    def howtemp() -> float:
+    def howtemp(self) -> float:
         return float(self.ins.ask("howtemp"))
 
-    def howpres() -> float:
+    def howpres(self) -> float:
         return float(self.ins.ask("howpres"))
 
-class tracking_sys:
-    def __init__(self, rover_ins):
-        self.rover_ins = rover_ins
-
-    def tracking(self, tracking_info:dict[str, int | list[int]]):
-        pass
         
