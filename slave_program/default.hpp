@@ -42,27 +42,26 @@ static task* task::inst_list[task::MAX_TASK];
 
 class timer {
 private:
-    uint16_t goal = 0;
+    uint32_t goal = 0;
     uint32_t start = 0;
 
 public:
     static uint32_t mil;
 
-    timer(uint16_t goal) {
+    timer(uint32_t goal=0) {
         this->goal = goal;
         this->start = mil;
     }
 
     bool check() {
         if (mil - this->start >= this->goal) {
-            this->start = mil;
             return true;
         } else {
             return false;
         }
     }
     
-    void restart(uint16_t goal) {
+    void restart(uint32_t goal=this->goal) {
         this->goal = goal;
         this->start = mil;
     }
@@ -125,20 +124,34 @@ uint8_t i2c::sec_byte = 0;
 bool i2c::i2c_flag = false;
 
 
-class unit {
+class default_program {
 private:
     static uint8_t unit_name;
     static uint8_t slave_address;
-    unit() = delete;
+    
+    static void name(uint8_t _ = 0) {
+        i2c::result_set(unit_name);
+    } 
+    
+    static void reboot(uint8_t _ = 0) {
+        wdt_enable(WDTO_15MS);
+        while (1) {}
+    }
+    
+    static void led(uint8_t flag) {
+        digitalWrite(LED_PIN, flag);
+    }
 
 public:
+    default_program() = delete;
+  
     static constexpr uint8_t LED_PIN = 13;
-
+  
     static void info(uint8_t name, uint8_t address) {
         unit_name = name;
         slave_address = address;
     }
-
+  
     static void setup() {
         Wire.onReceive(i2c::receiveEvent);
         Wire.onRequest(i2c::requestEvent);
@@ -152,23 +165,10 @@ public:
         new task("rebootします", reboot);
         new task("13pinのライト", led);
     }
-  
-    static void name(uint8_t _ = 0) {
-        i2c::result_set(unit_name);
-    } 
-
-    static const void reboot(uint8_t _ = 0) {
-        wdt_enable(WDTO_15MS);
-        while (1) {}
-    }
-
-    static void led(uint8_t flag) {
-        digitalWrite(LED_PIN, flag);
-    }
 };
 
-uint8_t unit::unit_name = 0;
-uint8_t unit::slave_address = 0;
+uint8_t default_program::unit_name = 0;
+uint8_t default_program::slave_address = 0;
 
 
 

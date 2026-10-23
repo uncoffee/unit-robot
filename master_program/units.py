@@ -49,16 +49,16 @@ class rover(units):
         self.st(time)
 
     def go(self,time:int) -> None:
-        self._MotorOn(self.DIRECTION_GO,time)
+        self._MotorOn(rover.DIRECTION_GO,time)
 
     def back(self,time:int) -> None:
-        self._MotorOn(self.DIRECTION_BACK,time)
+        self._MotorOn(rover.DIRECTION_BACK,time)
 
     def right(self,time:int) -> None:
-        self._MotorOn(self.DIRECTION_RIGHT,time)
+        self._MotorOn(rover.DIRECTION_RIGHT,time)
 
     def left(self,time:int) -> None:
-        self._MotorOn(self.DIRECTION_LEFT,time)
+        self._MotorOn(rover.DIRECTION_LEFT,time)
 
     def set_speed(self,speed:int) -> None:
         self.ins.send("setspeed",speed)
