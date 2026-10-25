@@ -29,49 +29,59 @@ class units:
             self.ins.send(1,0)
 
 class rover(units):
-    DIRECTION_GO  = {"right": "rf", "left": "lf"}
-    DIRECTION_BACK = {"right": "rb", "left": "lb"}
-    DIRECTION_RIGHT = {"right": "rb", "left": "lf"}
-    DIRECTION_LEFT = {"right": "rf", "left": "lb"}
+    DIRECTION_GO  = 3 # 0b11
+    DIRECTION_BACK = 0 # 0b00
+
+    # ここちょっとわかりずらい。　1:前進 0:後退　前進するタイヤの反対側に進むから、直感と違う感じになってる。
+    DIRECTION_RIGHT = 2 # 0b01
+    DIRECTION_LEFT = 1 # 0b10
+
+    # 命令の番号
+    SET_TIME = 3
+    CHANGE_DIRECTION = 4 
+    SET_SPEED = 5
+    HOW_SPEED = 6
+    
 
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
-        self.status:dict[str, str] = {}
-
-    def _MotorOn(self,DIRECTION:dict[str, str],time:int) -> None:
-        change = []
-        for key in DIRECTION.keys():
-            if self.status.get(key) != DIRECTION[key]:
-                self.status[key] = DIRECTION[key]
-                change.append(DIRECTION[key])
-
-        self.ins.send(*change)
-        self.st(time)
 
     def go(self,time:int) -> None:
-        self._MotorOn(rover.DIRECTION_GO,time)
+        self.ins.send(rover.CHANGE_DIRECTION, rover.DIRECTION_GO)
+        self.ins.send(rover.SET_TIME, time)
 
     def back(self,time:int) -> None:
-        self._MotorOn(rover.DIRECTION_BACK,time)
+        self.ins.send(rover.CHANGE_DIRECTION, rover.DIRECTION_BACK)
+        self.ins.send(rover.SET_TIME, time)
 
     def right(self,time:int) -> None:
-        self._MotorOn(rover.DIRECTION_RIGHT,time)
+        self.ins.send(rover.CHANGE_DIRECTION, rover.DIRECTION_RIGHT)
+        self.ins.send(rover.SET_TIME, time)
 
     def left(self,time:int) -> None:
-        self._MotorOn(rover.DIRECTION_LEFT,time)
+        self.ins.send(rover.CHANGE_DIRECTION, rover.DIRECTION_LEFT)
+        self.ins.send(rover.SET_TIME, time)
 
     def set_speed(self,speed:int) -> None:
-        self.ins.send("setspeed",speed)
+        self.ins.send(rover.SET_SPEED,speed)
 
     def how_speed(self) -> int:
-        return int(self.ins.ask("howspeed"))
+        return self.ins.ask(rover.HOW_SPEED)
+
+    def stop(self) -> None:
+        self.ins.send(rover.SET_TIME, 0)
 
 class mist(units):
+    SET_TIME = 3
+
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
 
     def spray(self,time:int) -> None:
-        self.st(time)
+        self.ins.send(mist.SET_TIME, time)
+
+    def stop(self) -> None:
+        self.ins.send(rover.SET_TIME, 0)
 
 class sensor(units):
     def __init__(self,slave_instance):

@@ -1,40 +1,6 @@
 #include "default.hpp"
 class unit {
 private:
-    // ピン配置の定義
-    static constexpr int FRONT_R = 11; // 前進のPIN1
-    static constexpr int BACK_R = 12; // 後退のPIN1
-  
-    static constexpr int FRONT_L = 9; // 前進のPIN2
-    static constexpr int BACK_L = 10; // 後退のPIN2
-    static bool right = true;
-    static bool left = true;
-    static uint8_t duty = 255; // 255の値が100%
-    static timer run_timer = new timer();
-
-    static void set_time(uint8_t time) {
-      run_timer->restart(time);
-    }
-  
-    static void change_direction(uint8_t bool_num) {
-      if(bool_num = 0) {
-        right = false;
-        left = false;
-        
-      } if else(bool_num = 1) {
-        right = true;
-        left = false;
-        
-      } if else(bool_num = 2) {
-        right = true;
-        left = false;
-        
-      } if else(bool_num = 3) {
-        right = true;
-        left = true;
-      }
-    }
-  
 public:
     unit() = delete;
     
@@ -42,39 +8,7 @@ public:
     static constexpr uint8_t add = 0x08; // 重複しなければなんでもいい。
 
     static void setup() {
-      new task("roverの稼働時間を設定。",set_time)
-      new task("進行方向を設定　引数は 0b Left Right。",change_direction)
-      
-    }
-  
-    static void _rover_stop() {
-      analogWrite(FRONT_R, 0);
-      analogWrite(BACK_R, 0);
-      analogWrite(FRONT_L, 0);
-      analogWrite(BACK_L, 0);
-    }
 
-    static void rover_run() {
-      if (run_timer->check) {
-        _rover_stop();
-        result;
-      }
-    
-      if (right) {
-        analogWrite(FRONT_R, duty);
-        analogWrite(BACK_R, 0);
-      } else {
-        analogWrite(BACK_R, duty);
-        analogWrite(FRONT_R, 0);
-      }
-    
-      if (left) {
-        analogWrite(FRONT_L, duty);
-        analogWrite(BACK_L, 0);
-      } else {
-        analogWrite(BACK_L, duty);
-        analogWrite(FRONT_L, 0);
-      }
     }
 };
 
@@ -84,6 +18,7 @@ void setup() {
     
     // セットアップ実行
     default_program::setup();
+    unit::setup();
     task::show();
 }
 
@@ -93,7 +28,8 @@ void loop() {
     // タイマー用変数の更新
     timer::mil = millis();
 
-    if (sleep_modoki->check) {
+    if (sleep_modoki.check()) {
         i2c::run_program();
+        unit::rover_run();
     }
 }

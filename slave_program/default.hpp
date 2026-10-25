@@ -39,30 +39,33 @@ public:
 };
 uint8_t task::_count = 0;
 static task* task::inst_list[task::MAX_TASK];
+bool goal_flag = false;
 
 class timer {
 private:
-    uint32_t goal = 0;
+    uint32_t blank = 0;
     uint32_t start = 0;
 
 public:
     static uint32_t mil;
 
-    timer(uint32_t goal=0) {
-        this->goal = goal;
+    timer(uint32_t blank=0) {
+        this->blank = blank;
         this->start = mil;
     }
 
     bool check() {
-        if (mil - this->start >= this->goal) {
+        if (mil - this->start >= this->blank) {
+            goal_flag = true;
             return true;
         } else {
             return false;
         }
     }
     
-    void restart(uint32_t goal=this->goal) {
-        this->goal = goal;
+    void restart(uint32_t blank) {
+        goal_flag = true;
+        this->blank = blank;
         this->start = mil;
     }
 };
@@ -162,8 +165,8 @@ public:
         wdt_disable();
         pinMode(LED_PIN, OUTPUT);
         new task("自分の役職を発表", name);
-        new task("rebootします", reboot);
         new task("13pinのライト", led);
+        new task("rebootします", reboot);
     }
 };
 

@@ -1,5 +1,5 @@
-from master_program.unitstart import setup
-from master_program.unitstart import I2C_class
+from master_program.start_up import setup
+from master_program.start_up import I2C_class
 import time
 
 def global_test():
@@ -9,6 +9,7 @@ def global_test():
     time.sleep(3)
     units.led(True)
     units.reboot()
+    time.sleep(5)
 
 def rover_test():
     print(units)
@@ -28,7 +29,7 @@ def rover_test():
     units["rover"].stop()
     units["rover"].back(2)
     print(units["rover"].how_speed())
-    units.reboot()
+    units["rover"].reboot()
     time.sleep(5)
     print(units["rover"].how_speed())
 
@@ -50,5 +51,7 @@ if __name__ == "__main__":
     setuper = setup(master_add, test_mode)
     units = setuper.setup()
     global_test()
+    rover_test()
+    mist_test()
     
 

@@ -2,7 +2,7 @@ from smbus2 import SMBus
 import time
 
 class I2C_class:
-    sleep = 0.1
+    sleep = 0.05
     read_byte = 2
     master_id = 1
 
