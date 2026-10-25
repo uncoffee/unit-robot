@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 class YOLOCamera:
-    def __init__(self, camera_id:int=0, threshold:float=0.75, model_path:str="yolov8n.pt"): #open-cvでやってみたけど微妙だった。
+    def __init__(self, threshold:float=0.80, model_path:str="yolov8n.pt", camera_id:int=0): #open-cvでやってみたけど微妙だった。
         print(f"YOLOモデル ({model_path}) をロード中...")
         self.model = YOLO(model_path)
         self.threshold = threshold
@@ -17,14 +17,23 @@ class YOLOCamera:
         if self.cap is not None: #isの使い方覚えようね。
             self.cap.release()
 
-    def search_human(self) -> list[list]: # X座標でソートされたX,Y座標のネスト。
+    def search_human(self) -> dict: # "shape":画像のXYサイズ,"persons"X座標が昇順になったXY座標のリスト。
         ret, frame = self.cap.read()
         if not ret:
             print("フレームの取得に失敗しました。")
-            return []
-            
-        results = self.model.predict(frame, classes=[0], conf=self.threshold) # classes=[0] がperson
-        return results[0].boxes.xyxy
+            return {}
+
+        # classes=[0] がperson
+        result = self.model.predict(frame, classes=[0], conf=self.threshold)[0] 
+        boxes = result.boxes
+
+        # Tensor型らしい。なにそれ。
+        xywh_list = boxes.xywh.cpu().numpy().tolist()
+        centers = [[box[0], box[1]] for box in xywh_list] # 検出したboxの中心座標のみ抽出
+
+        # 左から右の順番で人の座標を返す。
+        sorted_list = sorted(centers, key=lambda box: box[0]) 
+        return {"shape":result.orig_shape, "persons":sorted_list}
 
     def add_func(self, func):
         def wrapper(*args, **keywords):
@@ -33,11 +42,3 @@ class YOLOCamera:
 
             return result
         return wrapper
-            
-
-if __name__ == "__main__":
-    try:
-        camera_app = YOLOCamera(camera_id=0, model_path="yolov8n.pt")
-        camera_app.run()
-    except Exception as e:
-        print(f"エラーが発生しました: {e}")

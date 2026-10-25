@@ -6,6 +6,7 @@
 #include <avr/wdt.h>
 
 
+
 class task {
 private:
     void (*func)(uint8_t);
@@ -41,6 +42,8 @@ uint8_t task::_count = 0;
 static task* task::inst_list[task::MAX_TASK];
 bool goal_flag = false;
 
+
+
 class timer {
 private:
     uint32_t blank = 0;
@@ -72,19 +75,18 @@ public:
 uint32_t timer::mil = 0;
 
 
-class i2c {
-private:
-    static uint8_t job_id;
-    static uint8_t set_value;
 
-    static uint8_t fir_byte;
-    static uint8_t sec_byte;
+namespace i2c {
+    uint8_t job_id;
+    uint8_t set_value;
+
+    uint8_t fir_byte;
+    uint8_t sec_byte;
     
-public:
-    static bool i2c_flag;
+    bool i2c_flag;
     
     // 受信処理
-    static void receiveEvent(int howMany) {
+    void receiveEvent(int howMany) {
         job_id = Wire.read();
         
         if (howMany > 1) {
@@ -100,62 +102,55 @@ public:
     }
 
     // 送信処理
-    static void requestEvent() {
+    void requestEvent() {
         Wire.write(fir_byte);
         Wire.write(sec_byte);
         fir_byte = 0;
         sec_byte = 0;
     }
 
-    static void result_set(uint8_t first, uint8_t second=0) {
+    void result_set(uint8_t first, uint8_t second=0) {
         fir_byte = first;
         sec_byte = second;
     }
 
-    static void run_program() {
+    void run_program() {
         if(i2c_flag) {
             task::search(job_id, set_value);
             i2c_flag = false;
         }
     }
-};
-
-uint8_t i2c::job_id = 0;
-uint8_t i2c::set_value = 0;
-uint8_t i2c::fir_byte = 0;
-uint8_t i2c::sec_byte = 0;
-bool i2c::i2c_flag = false;
+}
 
 
-class default_program {
-private:
-    static uint8_t unit_name;
-    static uint8_t slave_address;
+
+namespace default_program {
+    uint8_t unit_name;
+    uint8_t slave_address;
     
-    static void name(uint8_t _ = 0) {
+    void name(uint8_t _ = 0) {
         i2c::result_set(unit_name);
     } 
     
-    static void reboot(uint8_t _ = 0) {
+    void reboot(uint8_t _ = 0) {
         wdt_enable(WDTO_15MS);
         while (1) {}
     }
     
-    static void led(uint8_t flag) {
+    void led(uint8_t flag) {
         digitalWrite(LED_PIN, flag);
     }
 
-public:
     default_program() = delete;
   
-    static constexpr uint8_t LED_PIN = 13;
+    constexpr uint8_t LED_PIN = 13;
   
-    static void info(uint8_t name, uint8_t address) {
+    void info(uint8_t name, uint8_t address) {
         unit_name = name;
         slave_address = address;
     }
   
-    static void setup() {
+    void setup() {
         Wire.onReceive(i2c::receiveEvent);
         Wire.onRequest(i2c::requestEvent);
         Wire.begin(slave_address); // 小文字の slave_address を使用
@@ -168,11 +163,7 @@ public:
         new task("13pinのライト", led);
         new task("rebootします", reboot);
     }
-};
-
-uint8_t default_program::unit_name = 0;
-uint8_t default_program::slave_address = 0;
-
+}
 
 
 #endif
