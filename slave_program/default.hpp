@@ -140,8 +140,6 @@ namespace default_program {
     void led(uint8_t flag) {
         digitalWrite(LED_PIN, flag);
     }
-
-    default_program() = delete;
   
     constexpr uint8_t LED_PIN = 13;
   

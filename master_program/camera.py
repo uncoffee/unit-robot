@@ -17,11 +17,11 @@ class YOLOCamera:
         if self.cap is not None: #isの使い方覚えようね。
             self.cap.release()
 
-    def search_human(self) -> dict: # "shape":画像のXYサイズ,"persons"X座標が昇順になったXY座標のリスト。
+    def search_human(self) -> dict | None: # "shape":画像のXYサイズ,"persons"X座標が昇順になったXY座標のリスト。
         ret, frame = self.cap.read()
         if not ret:
             print("フレームの取得に失敗しました。")
-            return {}
+            return None
 
         # classes=[0] がperson
         result = self.model.predict(frame, classes=[0], conf=self.threshold)[0] 
