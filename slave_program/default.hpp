@@ -125,6 +125,7 @@ namespace i2c {
 
 
 namespace default_program {
+    constexpr uint8_t LED_PIN = 13;
     uint8_t unit_name;
     uint8_t slave_address;
     
@@ -140,8 +141,6 @@ namespace default_program {
     void led(uint8_t flag) {
         digitalWrite(LED_PIN, flag);
     }
-  
-    constexpr uint8_t LED_PIN = 13;
   
     void info(uint8_t name, uint8_t address) {
         unit_name = name;

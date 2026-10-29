@@ -1,7 +1,19 @@
 from camera import YOLOCamera
-from master_program.start_up import setup
+from start_up import setup
 import time
-inst = YOLOCamera()
+
+class banana:
+    def __init__(self, units):
+        self.units = units
+
+    def __enter__(self, *args):
+        pass
+
+    def __exit__(self, *args):
+        self.units.reboot()
+
+inst = YOLOCamera(0.70)
+
 
 @inst.add_func
 def run(serch_person,unit_dict):
@@ -9,12 +21,13 @@ def run(serch_person,unit_dict):
     time.sleep(5)
     unit_dict.led(False)
     time.sleep(1)
-    unit_dict["rover"].set_speed(100) #max 255
+    unit_dict["rover"].set_speed(50) #max 255
     unit_dict["rover"].left(60)
     while True:
         result = serch_person()
 
         if not result == None:
+            print(result)
             ing_info = result["shape"]
             persons_dict = result["persons"]
 
@@ -23,17 +36,19 @@ def run(serch_person,unit_dict):
 
             hantei = persons_dict[0][0] - ing_center
 
-            if -25 < hantei < 25:
+            if -50 < hantei < 50:
                 unit_dict["rover"].stop()
-                unit_dict["mist"].spray(5)
-                time.sleep(5)
+                unit_dict["mist"].spray(15)
+                time.sleep(15)
                 unit_dict.reboot()
                 break
 
         time.sleep(1)
 
 
+setup_inst = setup()
+units_dict = setup_inst.setup()
+with_you = banana(units_dict)
 
-
-run(setup.setup())
-        
+with with_you:
+    run(units_dict)

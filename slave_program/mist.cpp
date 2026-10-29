@@ -13,16 +13,16 @@ namespace unit {
     
     void mist_run() {
       if (run_timer.check()) {
-        digitalWrite(SPLASH_PIN, LOW);
+        analogWrite(SPLASH_PIN, 0);
         return;
       }
 
-      digitalWrite(SPLASH_PIN, HIGH);
+      analogWrite(SPLASH_PIN, 255);
     }
 
     void setup() {
+      pinMode(BACK_L, OUTPUT);
       new task("ミストの噴出時間", set_time);
-
     }
 }
 

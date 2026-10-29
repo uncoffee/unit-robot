@@ -48,6 +48,11 @@ namespace unit {
     constexpr uint8_t add = 0x08; // 重複しなければなんでもいい。
 
     void setup() {
+      pinMode(FRONT_R, OUTPUT);
+      pinMode(BACK_R, OUTPUT);
+      pinMode(FRONT_L, OUTPUT);
+      pinMode(BACK_L, OUTPUT);
+      
       new task("roverの稼働時間を設定。",set_time);
       new task("進行方向を設定。引数は 0b Left Right。",change_direction);
       new task("速度設定。0~255で指定",set_speed);

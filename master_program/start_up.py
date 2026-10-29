@@ -1,6 +1,7 @@
-from master_program.i2c import I2C_class, scan_i2c_bus
-from master_program.tool_box import create_instance, custom_print, id_to_name
-from master_program.units import UnitsDict
+from i2c import I2C_class, scan_i2c_bus
+from tool_box import create_instance, custom_print, id_to_name
+from units import UnitsDict
+
 
 
 class setup:
@@ -10,7 +11,7 @@ class setup:
 
     def setup(self) -> dict:
         #ファイルの場所を設定。
-        slave_ins_file = "master_program.units"
+        slave_ins_file = "units"
 
         # i2c機器を探す
         slave_adds = scan_i2c_bus(self.master_add)

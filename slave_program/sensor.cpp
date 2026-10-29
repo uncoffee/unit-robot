@@ -1,4 +1,5 @@
 #include "default.hpp"
+#include <Adafruit_BME280.h>
 
 """
 
@@ -10,14 +11,25 @@ namespace unit {
     constexpr uint8_t name = 0x01; // roverのID（仮）
     constexpr uint8_t add = 0x08; // 重複しなければなんでもいい。
 
-    Adafruit_BMP280 bmp; // I2C接続
     uint8_t BMP_ID = 0x76 // 初期値として0x76に設定
-    uint8_t temp = 0.0; // ℃
-    uint8_t pres = 0.0; // hPa
+    float raw_temp; // ℃
+    float raw_hum; // %
+    float raw_pres; // hPa
+
+    uint16_t temp;
+    uint16_t hum;
+    uint16_t pres;
 
     void BME_get() {
-      temp = bmp.readTemperature();
-      pres = bmp.readPressure() / 100.0F;
+      raw_temp = bmp.readTemperature(); // 温度
+      raw_hum = bme.readHumidity(); // 湿度
+      raw_pres = bmp.readPressure(); // 気圧
+    }
+
+    void calculat() {
+      temp = (uint16_t)(raw_temp * 1000 + 0.5);
+      hum = (uint16_t)(raw_hum * 1000 + 0.5);
+      pres = (uint16_t)(raw_pres * 1000 + 0.5);
     }
 
     bool _BME() {

@@ -1,5 +1,5 @@
-from master_program.start_up import setup
-from master_program.start_up import I2C_class
+from start_up import setup
+from start_up import I2C_class
 import time
 
 def global_test():
@@ -34,15 +34,11 @@ def rover_test():
     print(units["rover"].how_speed())
 
 def mist_test():
-    units["mist"].spray(5)
-    time.sleep(5)
+    units.led(True)
     units["mist"].spray(10)
-    time.sleep(5)
+    time.sleep(10)
+    units.led(False)
     units["mist"].stop()
-    time.sleep(2)
-    units["mist"].spray(10)
-    time.sleep(5)
-    units["mist"].reboot()
 
 #テストコード
 if __name__ == "__main__":
@@ -50,8 +46,6 @@ if __name__ == "__main__":
     test_mode = True
     setuper = setup(master_add, test_mode)
     units = setuper.setup()
-    global_test()
-    rover_test()
     mist_test()
     
 

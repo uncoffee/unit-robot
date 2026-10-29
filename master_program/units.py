@@ -1,3 +1,6 @@
+from smbus2 import SMBus
+import bme280
+
 class UnitsDict(dict):
     def apply_all(self, action) -> None:
         for unit in self.values():
@@ -86,11 +89,12 @@ class mist(units):
 class sensor(units):
     def __init__(self,slave_instance):
         super().__init__(slave_instance)
+        with SMBus(self.ins.master_id) as bus:
+            self.calibration_params = bme280.load_calibration_params(bus, self.ins.slave_id)
     
-    def howtemp(self) -> float:
-        return float(self.ins.ask("howtemp"))
-
-    def howpres(self) -> float:
-        return float(self.ins.ask("howpres"))
+    def kansoku(self) -> dict:
+        with SMBus(self.ins.master_id) as bus:
+            data = bme280.sample(bus, self.ins.slave_id, self.calibration_params)
+        return {"temp":data.temperature, "hum":data.humidity, "pres":data.pressure}
 
         

@@ -28,7 +28,9 @@ def create_instance(file_name:str, object_name:str, *args:any):
 def id_to_name(num):
     units_dict = {
         1:"rover",
-        2:"mist"
+        2:"mist",
+        3:"sensor"
+
     }
     unit_name = units_dict.get(num)
     return unit_name

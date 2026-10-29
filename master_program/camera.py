@@ -26,6 +26,8 @@ class YOLOCamera:
         # classes=[0] がperson
         result = self.model.predict(frame, classes=[0], conf=self.threshold)[0] 
         boxes = result.boxes
+        if not len(boxes) > 0:
+            return None
 
         # Tensor型らしい。なにそれ。
         xywh_list = boxes.xywh.cpu().numpy().tolist()

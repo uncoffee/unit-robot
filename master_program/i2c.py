@@ -14,8 +14,6 @@ class I2C_class:
         time.sleep(I2C_class.sleep)
         print(f"{fir_byte}, {sec_byte}")
         try:
-
-
             if fir_byte > 0xff and sec_byte > 0xff:
                 raise ValueError("引数一つ目もしくは二つ目の値は0x00~0xff以内である必要があります")
             
