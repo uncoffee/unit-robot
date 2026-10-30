@@ -1,13 +1,32 @@
+from bmp280 import BMP280
 from smbus2 import SMBus
-import bme280
 
-class sensor:
-    slave_add = 0x76
-    def __init__(self):
-        with SMBus(1) as bus:
-            self.calibration_params = bme280.load_calibration_params(bus, sensor.slave_add)
-    
-    def kansoku(self) -> dict:
-        with SMBus(1) as bus:
-            data = bme280.sample(bus, sensor.slave_add, self.calibration_params)
-        return {"temp":data.temperature, "hum":data.humidity, "pres":data.pressure}
+class kansoku:
+    def getdata(self):
+        temp = self.bmp280.get_temperature()
+        pres = self.bmp280.get_pressure()
+        return {"temp":temp, "pres":pres}
+
+    def add_func(self, func):
+        def wrapper(*args, **keywords):
+            with SMBus(1) as bus:
+                self.bmp280 = BMP280(i2c_dev=bus, i2c_addr=0x76)
+                result = func(self.getdata, *args, **keywords)
+            return result
+        return wrapper                
+                
+
+
+
+
+
+if __name__ == "__main__":
+    with SMBus(1) as bus:
+        # i2c_dev に数値の 1 ではなく、bus オブジェクトを渡す
+        bmp280 = BMP280(i2c_dev=bus, i2c_addr=0x76)
+        
+        temp = bmp280.get_temperature()
+        pres = bmp280.get_pressure()
+
+        print(f"温度: {temp:.2f} °C")
+        print(f"気圧: {pres:.2f} hPa")

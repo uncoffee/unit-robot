@@ -26,8 +26,6 @@ class YOLOCamera:
         # classes=[0] がperson
         result = self.model.predict(frame, classes=[0], conf=self.threshold)[0] 
         boxes = result.boxes
-        if not len(boxes) > 0:
-            return None
 
         # Tensor型らしい。なにそれ。
         xywh_list = boxes.xywh.cpu().numpy().tolist()
@@ -44,3 +42,30 @@ class YOLOCamera:
 
             return result
         return wrapper
+
+
+import time
+
+camera_inst = YOLOCamera(threshold=0.70)
+@camera_inst.add_func
+def camera_check(camera):
+    while True:
+        result = camera()
+        print(result)
+
+        persons_dict = result["persons"]
+
+        if not persons_dict == []:
+            print(result)
+
+            if 290 < persons_dict[0][0] < 330:
+                print("映ったよ")
+                break
+
+        time.sleep(1)
+
+
+
+if __name__ == "__main__":
+
+    camera_check()

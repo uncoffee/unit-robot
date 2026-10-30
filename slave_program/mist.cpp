@@ -21,7 +21,7 @@ namespace unit {
     }
 
     void setup() {
-      pinMode(BACK_L, OUTPUT);
+      pinMode(SPLASH_PIN, OUTPUT);
       new task("ミストの噴出時間", set_time);
     }
 }

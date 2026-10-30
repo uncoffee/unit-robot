@@ -35,6 +35,7 @@ def rover_test():
 
 def mist_test():
     units.led(True)
+    time.sleep(2)
     units["mist"].spray(10)
     time.sleep(10)
     units.led(False)

@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "bmp280>=1.0.0",
+    "keyboard>=0.13.5",
     "opencv-contrib-python>=5.0.0.93",
     "smbus2>=0.6.1",
 ]

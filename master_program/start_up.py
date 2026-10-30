@@ -26,8 +26,14 @@ class setup:
             # そのスレーブが何なのか確認する
             slave_id = i2c_inst.ask(0)
             print(slave_id)
-            slave_name = id_to_name(slave_id[0])
-            self.print(f"{slave_name}が接続されていることを確認しました")
-            UniDic[slave_name] = create_instance(slave_ins_file,slave_name,i2c_inst)
+            try:
+                slave_name = id_to_name(slave_id[0])
+                self.print(f"{slave_name}が接続されていることを確認しました")
+                inst = create_instance(slave_ins_file,slave_name,i2c_inst)
+
+            except:
+                continue
+
+            UniDic[slave_name] = inst
 
         return UniDic

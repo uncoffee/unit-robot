@@ -1,22 +1,13 @@
 from camera import YOLOCamera
+from kansoku import kansoku
 from start_up import setup
 import time
 
-class banana:
-    def __init__(self, units):
-        self.units = units
+camera_inst = YOLOCamera()
+kansoku_inst = kansoku()
 
-    def __enter__(self, *args):
-        pass
-
-    def __exit__(self, *args):
-        self.units.reboot()
-
-inst = YOLOCamera(0.70)
-
-
-@inst.add_func
-def run(serch_person,unit_dict):
+def run(func_dict,unit_dict):
+    serch_person = func_dict["camera"]
     unit_dict.led(True)
     time.sleep(5)
     unit_dict.led(False)
@@ -46,9 +37,11 @@ def run(serch_person,unit_dict):
         time.sleep(1)
 
 
-setup_inst = setup()
-units_dict = setup_inst.setup()
-with_you = banana(units_dict)
+@kansoku_inst.add_func
+@camera_inst.add_func
+def check(scan,kansoku):
+    print(scan())
+    print(kansoku())
 
-with with_you:
-    run(units_dict)
+time.sleep(5)
+check()
