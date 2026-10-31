@@ -28,7 +28,7 @@ def serch_and_destroy(serch_person,unit_dict):
         if not persons == None:
             print(result)
 
-            if 290 < persons[0][0] < 330:
+            if 290 < persons[0][0] < 330 and 0.8 < persons[0][3] < 1.3:
                 unit_dict["rover"].stop()
                 unit_dict["mist"].spray(15)
                 time.sleep(15)
