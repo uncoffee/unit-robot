@@ -29,16 +29,58 @@ class YOLOCamera:
 
         # Tensor型らしい。なにそれ。
         xywh_list = boxes.xywh.cpu().numpy().tolist()
-        centers = [[box[0], box[1]] for box in xywh_list] # 検出したboxの中心座標のみ抽出
+        centers = [[box[0], box[1], box[3]] for box in xywh_list] # 検出したboxの中心座標のみ抽出
 
         # 左から右の順番で人の座標を返す。
         sorted_list = sorted(centers, key=lambda box: box[0]) 
         return {"shape":result.orig_shape, "persons":sorted_list}
 
-    def add_func(self, func):
+    def serch_value(self, pura_mai, m):
+        x, y, h = 0, 0, 0
+        for _ in range(10):
+            ret, frame = self.cap.read()
+            if not ret:
+                print("フレームの取得に失敗しました。")
+                return None
+
+            # classes=[0] がperson
+            result = self.model.predict(frame, classes=[0], conf=self.threshold)[0] 
+            boxes = result.boxes
+
+            # Tensor型らしい。なにそれ。
+            xywh_list = boxes.xywh.cpu().numpy().tolist()
+            x, y, h += xywh_list[0][0], xywh_list[0][1], xywh_list[0][3]
+        x, y, h /= 10, 10, 10
+
+        while True:
+            distance_m = ((640 * h) / pixel_height) / 100.0
+
+            if not self.m - 0.1 < distance_m:
+                pixel_height =- 10
+
+            elif not distance_m < self.m + 0.1:
+                pixel_height =- 1
+
+            else:
+                break
+
+        return {"xy":[x,y], "syouten":pixel_height}
+
+
+    def serch_value_func(self, m, func):
+        self.m = m
+
         def wrapper(*args, **keywords):
             with self:
                 result = func(self.search_human, *args, **keywords) # resultいりますかね？行動ログとか作るんかね？俺は嫌だよ。
+
+            return result
+        return wrapper
+
+    def add_func(self, func):
+        def wrapper(*args, **keywords):
+            with self:
+                result = func(self.serch_value, *args, **keywords) # resultいりますかね？行動ログとか作るんかね？俺は嫌だよ。
 
             return result
         return wrapper
@@ -63,6 +105,12 @@ def camera_check(camera):
                 break
 
         time.sleep(1)
+
+
+camera_inst = YOLOCamera(threshold=0.70)
+@camera_inst.serch_value_func(1)
+def value_serch(func):
+    print(func)
 
 
 
