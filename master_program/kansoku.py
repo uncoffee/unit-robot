@@ -19,14 +19,12 @@ class kansoku:
 
 
 
+a = kansoku()
+
+@a.add_func
+def check(func):
+    print(func())
+
 
 if __name__ == "__main__":
-    with SMBus(1) as bus:
-        # i2c_dev に数値の 1 ではなく、bus オブジェクトを渡す
-        bmp280 = BMP280(i2c_dev=bus, i2c_addr=0x76)
-        
-        temp = bmp280.get_temperature()
-        pres = bmp280.get_pressure()
-
-        print(f"温度: {temp:.2f} °C")
-        print(f"気圧: {pres:.2f} hPa")
+    check()

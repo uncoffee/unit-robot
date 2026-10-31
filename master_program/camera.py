@@ -67,5 +67,4 @@ def camera_check(camera):
 
 
 if __name__ == "__main__":
-
     camera_check()

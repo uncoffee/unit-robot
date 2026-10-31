@@ -1,5 +1,4 @@
 from start_up import setup
-from start_up import I2C_class
 import time
 
 def global_test():

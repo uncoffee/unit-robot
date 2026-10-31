@@ -2,46 +2,47 @@ from camera import YOLOCamera
 from kansoku import kansoku
 from start_up import setup
 import time
+import json
+
+data = {
+    "name": "rover",
+    "id": 1,
+    "skills": ["Python", "Docker"],
+    "is_active": True,
+}
+
+# 日本語文字化け防止のため ensure_ascii=False、整形表示のため indent=4 を指定
+with open("data.json", "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=4)
 
 camera_inst = YOLOCamera()
 kansoku_inst = kansoku()
 
-def run(func_dict,unit_dict):
-    serch_person = func_dict["camera"]
-    unit_dict.led(True)
-    time.sleep(5)
-    unit_dict.led(False)
-    time.sleep(1)
+def serch_and_destroy(serch_person,unit_dict):
     unit_dict["rover"].set_speed(50) #max 255
-    unit_dict["rover"].left(60)
+    unit_dict["rover"].left(30)
     while True:
         result = serch_person()
+        persons = result["persons"]
 
-        if not result == None:
+        if not persons == None:
             print(result)
-            ing_info = result["shape"]
-            persons_dict = result["persons"]
 
-            ing_x = ing_info[0]
-            ing_center = ing_x // 2
-
-            hantei = persons_dict[0][0] - ing_center
-
-            if -50 < hantei < 50:
+            if 290 < persons[0][0] < 330:
                 unit_dict["rover"].stop()
                 unit_dict["mist"].spray(15)
                 time.sleep(15)
-                unit_dict.reboot()
                 break
 
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 @kansoku_inst.add_func
 @camera_inst.add_func
 def check(scan,kansoku):
-    print(scan())
-    print(kansoku())
+    while True:
+        print(scan())
+        print(kansoku())
 
 time.sleep(5)
 check()
